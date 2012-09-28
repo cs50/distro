@@ -88,6 +88,7 @@ int main(int argc, string argv[])
     }
 
     // load dictionary
+    // http://www.becomeawordgameexpert.com/wordlists.htm
     if (!load("./dictionary.csv"))
     {
         printf("Could not open dictionary.\n");
