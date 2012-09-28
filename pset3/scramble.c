@@ -32,15 +32,14 @@ bool marks[DIMENSION][DIMENSION];
 #define WORDS 172806
 
 // maximum number of letters in any word
-// (e.g., pneumonoultramicroscopicsilicovolcanoconiosis)
-#define LETTERS 45
+#define LETTERS 29
 
 // defines a word as having an array of letters plus a flag
 // indicating whether word has been found on board
 typedef struct
 {
     bool found;
-    char letters[LETTERS];
+    char letters[LETTERS+1];
 }
 word;
 
@@ -54,12 +53,13 @@ dictionary;
 
 // prototypes
 void clear(void);
+bool crawl(string word, int x, int y);
 void draw(void);
 bool find(string word);
 void initialize(void);
 bool load(string filename);
 bool lookup(string word);
-bool crawl(string word, int x, int y);
+void scramble(void);
 
 // This is Scramble.
 int main(int argc, string argv[])
@@ -75,17 +75,15 @@ int main(int argc, string argv[])
     if (argc == 2)
     {
         int seed = atoi(argv[1]);
-        if (seed < 0)
+        if (seed <= 0)
         {
-            printf("Illegal seed.\n");
+            printf("Invalid board.\n");
             return 1;
         }
         srand(seed);
     }
     else
-    {
         srand(time(NULL));
-    }
 
     // load dictionary
     // http://www.becomeawordgameexpert.com/wordlists.htm
@@ -140,9 +138,16 @@ int main(int argc, string argv[])
             for (int i = 0, n = strlen(word); i < n; i++) 
                 word[i] = toupper(word[i]);
 
-            // look for word on board and in dictionary
-            if (find(word) == true && lookup(word) == true)
-                score += strlen(word);
+            // check whether to scramble board
+            if (strcmp(word, "SCRAMBLE") == 0)
+                scramble();
+
+            // or to look for word on board and in dictionary
+            else
+            {
+                if (find(word) == true && lookup(word) == true)
+                    score += strlen(word);
+            }
         }
     }
 
@@ -215,13 +220,11 @@ bool crawl(string letters, int x, int y)
 void draw(void)
 {
     printf("\n");
-	for (int i = 0; i < DIMENSION; i++)
+    for (int row = 0; row < DIMENSION; row++)
     {
         printf(" ");
-	    for (int j = 0; j < DIMENSION; j++)
-        {
-            printf("%2c", board[i][j]);
-        }
+        for (int col = 0; col < DIMENSION; col++)
+            printf("%2c", board[row][col]);
         printf("\n");
     }
     printf("\n");
@@ -237,9 +240,9 @@ bool find(string word)
         return false;
 
     // search board for word
-    for (int i = 0; i < DIMENSION; i++)
+    for (int row = 0; row < DIMENSION; row++)
     {
-        for (int j = 0; j < DIMENSION; j++)
+        for (int col = 0; col < DIMENSION; col++)
         {
             // reset marks
             for (int i = 0; i < DIMENSION; i++)
@@ -247,7 +250,7 @@ bool find(string word)
                     marks[i][j] = false;
 
             // search for word starting at board[i][j]
-            if (crawl(word, i, j) == true)
+            if (crawl(word, row, col) == true)
                 return true;
         }
     }
@@ -260,7 +263,7 @@ bool find(string word)
 void initialize(void)
 {
     // http://en.wikipedia.org/wiki/Letter_frequency
-    float frequencies[26] = {
+    float frequencies[] = {
      8.167,  // a
      1.492,  // b
      2.782,  // c
@@ -288,22 +291,23 @@ void initialize(void)
      1.974,  // y
      0.074   // z
     };
+    int n = sizeof(frequencies) / sizeof(float);
 
     // iterate over board
-	for (int i = 0; i < DIMENSION; i++)
+    for (int row = 0; row < DIMENSION; row++)
     {
-	    for (int j = 0; j < DIMENSION; j++)
+        for (int col = 0; col < DIMENSION; col++)
         {   
             // generate pseudorandom double in [0, 1)
             double d = rand() / (double) RAND_MAX;
 
             // map d onto range of frequencies
-            for (int k = 0; k < 26; k++)
+            for (int k = 0; k < n; k++)
             {
                 d -= frequencies[k] / 100;
-                if (d < 0.0 || k == 25)
+                if (d < 0.0 || k == n - 1)
                 {
-                    board[i][j] = 'A' + k;
+                    board[row][col] = 'A' + k;
                     break;
                 }
             }
@@ -334,6 +338,10 @@ bool load(string filename)
         // capitalize word
         for (int i = 0, n = strlen(buffer); i < n; i++)
             buffer[i] = toupper(buffer[i]);
+
+        // ignore SCRAMBLE
+        if (strcmp(buffer, "SCRAMBLE") == 0) 
+            continue;
 
         // copy word into dictionary
         dictionary.words[dictionary.size].found = false;
@@ -371,4 +379,13 @@ bool lookup(string word)
 
     // fail
     return false;
+}
+
+/**
+ * Scrambles the board by rotating it 90 degrees clockwise, whereby
+ * board[0][0] rotates to board[0][DIMENSION-1]
+ */
+void scramble(void)
+{
+    // TODO
 }
