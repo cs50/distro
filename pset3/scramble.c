@@ -107,7 +107,7 @@ int main(int argc, string argv[])
     while (true)
     {
         // clear the screen
-        clear();
+        //clear();
 
         // draw the current state of the board
         draw();
@@ -178,12 +178,12 @@ bool crawl(string letters, int x, int y)
     if (marks[x][y] == true)
         return false;
 
-    // mark location as seen
-    marks[x][y] = true;
-
     // check board[x][y] for current letter
     if (board[x][y] != letters[0])
         return false;
+
+    // mark location
+    marks[x][y] = true;
 
     // look left and right for next letter
     for (int i = -1; i <= 1; i++)
@@ -200,6 +200,11 @@ bool crawl(string letters, int x, int y)
                 return true;
         }
     }
+
+    // unmark location
+    marks[x][y] = false;
+
+    // fail
     return false;
 }
 
@@ -253,7 +258,7 @@ bool find(string word)
  */
 void initialize(void)
 {
-    // http://en.wikipedia.org/wiki/Letter_frequency#Relative_frequencies_of_letters_in_the_English_language
+    // http://en.wikipedia.org/wiki/Letter_frequency
     float frequencies[26] = {
      8.167,  // a
      1.492,  // b
