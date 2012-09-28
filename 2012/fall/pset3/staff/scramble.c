@@ -22,17 +22,20 @@
 // grid's dimensions
 #define DIMENSION 4
 
-// grid
-char grid[DIMENSION][DIMENSION];
-
-// flags with which we can mark grid's letters while searching for words
-bool marks[DIMENSION][DIMENSION];
-
 // maximum number of words in any dictionary
 #define WORDS 172806
 
 // maximum number of letters in any word
 #define LETTERS 29
+
+// for logging
+FILE* log;
+
+// grid
+char grid[DIMENSION][DIMENSION];
+
+// flags with which we can mark grid's letters while searching for words
+bool marks[DIMENSION][DIMENSION];
 
 // defines a word as having an array of letters plus a flag
 // indicating whether word has been found on grid
@@ -93,16 +96,21 @@ int main(int argc, string argv[])
         return 1;
     }
 
-    // initialize user's score
-    int score = 0;
-
     // initialize the grid
     initialize();
+
+    // initialize user's score
+    int score = 0;
 
     // calculate time of game's end
     int end = time(NULL) + DURATION;
 
-    // accept moves until game is won
+    // open log
+    log = fopen("log.txt", "a");
+    if (log == NULL)
+        return 1;
+ 
+    // accept words until timer expires
     while (true)
     {
         // clear the screen
@@ -111,11 +119,20 @@ int main(int argc, string argv[])
         // draw the current state of the grid
         draw();
 
+        // log board
+        for (int row = 0; row < DIMENSION; row++)
+        {
+            for (int col = 0; col < DIMENSION; col++)
+                fprintf(log, "%c", grid[row][col]);
+            fprintf(log, "\n");
+        }
+
         // get current time
         int now = time(NULL);
 
         // report score
         printf("Score: %d\n", score);
+        fprintf(log, "%d\n", score);
 
         // check for game's end
         if (now >= end)
@@ -123,7 +140,7 @@ int main(int argc, string argv[])
             printf("\033[31m"); // red
             printf("Time:  %d\n\n", 0);
             printf("\033[39m"); // default
-            return 0;
+            break;
         }
 
         // report time remaining
@@ -138,6 +155,9 @@ int main(int argc, string argv[])
             for (int i = 0, n = strlen(word); i < n; i++) 
                 word[i] = toupper(word[i]);
 
+            // log word
+            fprintf(log, "%s\n", word);
+
             // check whether to scramble grid
             if (strcmp(word, "SCRAMBLE") == 0)
                 scramble();
@@ -151,7 +171,9 @@ int main(int argc, string argv[])
         }
     }
 
-    // the end
+    // close log
+    fclose(log);
+
     return 0;
 }
 
@@ -220,7 +242,9 @@ void draw(void)
     {
         printf(" ");
         for (int col = 0; col < DIMENSION; col++)
+        {
             printf("%2c", grid[row][col]);
+        }
         printf("\n");
     }
     printf("\n");
@@ -341,7 +365,7 @@ bool load(string filename)
 
         // copy word into dictionary
         dictionary.words[dictionary.size].found = false;
-        strncpy(dictionary.words[dictionary.size].letters, buffer, LETTERS + 2);
+        strncpy(dictionary.words[dictionary.size].letters, buffer, LETTERS + 1);
         dictionary.size++;
     }
 
@@ -350,8 +374,8 @@ bool load(string filename)
 }
 
 /**
- * Looks up word in dictionary.  Iff found (for the first time),
- * flags word and returns true.
+ * Looks up word in dictionary.  Iff found (for the first time), flags word
+ * as found (so that user can't score with it again) and returns true.
  */
 bool lookup(string word)
 {
