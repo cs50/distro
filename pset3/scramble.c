@@ -108,7 +108,7 @@ int main(int argc, string argv[])
     while (true)
     {
         // clear the screen
-        //clear();
+        clear();
 
         // draw the current state of the board
         draw();
