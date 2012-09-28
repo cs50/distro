@@ -7,7 +7,7 @@
  *
  * Usage: scramble [#]
  *
- * where # is an optional board number.
+ * where # is an optional grid number.
  ***************************************************************************/
  
 #include <cs50.h>
@@ -19,13 +19,13 @@
 // duration of a game in seconds
 #define DURATION 30
 
-// board's dimensions
+// grid's dimensions
 #define DIMENSION 4
 
-// board
-char board[DIMENSION][DIMENSION];
+// grid
+char grid[DIMENSION][DIMENSION];
 
-// flags with which we can mark board's letters while searching for words
+// flags with which we can mark grid's letters while searching for words
 bool marks[DIMENSION][DIMENSION];
 
 // maximum number of words in any dictionary
@@ -35,7 +35,7 @@ bool marks[DIMENSION][DIMENSION];
 #define LETTERS 29
 
 // defines a word as having an array of letters plus a flag
-// indicating whether word has been found on board
+// indicating whether word has been found on grid
 typedef struct
 {
     bool found;
@@ -77,7 +77,7 @@ int main(int argc, string argv[])
         int seed = atoi(argv[1]);
         if (seed <= 0)
         {
-            printf("Invalid board.\n");
+            printf("Invalid grid.\n");
             return 1;
         }
         srand(seed);
@@ -87,7 +87,7 @@ int main(int argc, string argv[])
 
     // load dictionary
     // http://www.becomeawordgameexpert.com/wordlists.htm
-    if (!load("./dictionary.csv"))
+    if (!load("./words"))
     {
         printf("Could not open dictionary.\n");
         return 1;
@@ -96,7 +96,7 @@ int main(int argc, string argv[])
     // initialize user's score
     int score = 0;
 
-    // initialize the board
+    // initialize the grid
     initialize();
 
     // calculate time of game's end
@@ -108,7 +108,7 @@ int main(int argc, string argv[])
         // clear the screen
         clear();
 
-        // draw the current state of the board
+        // draw the current state of the grid
         draw();
 
         // get current time
@@ -138,11 +138,11 @@ int main(int argc, string argv[])
             for (int i = 0, n = strlen(word); i < n; i++) 
                 word[i] = toupper(word[i]);
 
-            // check whether to scramble board
+            // check whether to scramble grid
             if (strcmp(word, "SCRAMBLE") == 0)
                 scramble();
 
-            // or to look for word on board and in dictionary
+            // or to look for word on grid and in dictionary
             else
             {
                 if (find(word) == true && lookup(word) == true)
@@ -165,7 +165,7 @@ void clear()
 }
 
 /**
- * Crawls board recursively for letters starting at board[x][y].
+ * Crawls grid recursively for letters starting at grid[x][y].
  * Returns true iff all letters are found.
  */
 bool crawl(string letters, int x, int y)
@@ -174,7 +174,7 @@ bool crawl(string letters, int x, int y)
     if (strlen(letters) == 0)
         return true;
 
-    // don't fall off the board!
+    // don't fall off the grid!
     if (x < 0 || x >= DIMENSION)
         return false;
     if (y < 0 || y >= DIMENSION)
@@ -184,8 +184,8 @@ bool crawl(string letters, int x, int y)
     if (marks[x][y] == true)
         return false;
 
-    // check board[x][y] for current letter
-    if (board[x][y] != letters[0])
+    // check grid[x][y] for current letter
+    if (grid[x][y] != letters[0])
         return false;
 
     // mark location
@@ -197,12 +197,8 @@ bool crawl(string letters, int x, int y)
         // look down and up for next letter
         for (int j = -1; j <= 1; j++)
         {
-            // don't check board[x+0][y+0]
-            if (i == 0 && j == 0)
-                continue;
-
-            // check board[x+i][y+j] for next letter
-            if (crawl(&letters[1], x+i, y+j) == true)
+            // check grid[x + i][y + j] for next letter
+            if (crawl(&letters[1], x + i, y + j) == true)
                 return true;
         }
     }
@@ -215,7 +211,7 @@ bool crawl(string letters, int x, int y)
 }
 
 /** 
- * Prints the board in its current state.
+ * Prints the grid in its current state.
  */
 void draw(void)
 {
@@ -224,14 +220,14 @@ void draw(void)
     {
         printf(" ");
         for (int col = 0; col < DIMENSION; col++)
-            printf("%2c", board[row][col]);
+            printf("%2c", grid[row][col]);
         printf("\n");
     }
     printf("\n");
 }
 
 /**
- * Returns true iff word is found in board.
+ * Returns true iff word is found in grid.
  */
 bool find(string word)
 {
@@ -239,7 +235,7 @@ bool find(string word)
     if (strlen(word) < 2)
         return false;
 
-    // search board for word
+    // search grid for word
     for (int row = 0; row < DIMENSION; row++)
     {
         for (int col = 0; col < DIMENSION; col++)
@@ -249,7 +245,7 @@ bool find(string word)
                 for (int j = 0; j < DIMENSION; j++)
                     marks[i][j] = false;
 
-            // search for word starting at board[i][j]
+            // search for word starting at grid[i][j]
             if (crawl(word, row, col) == true)
                 return true;
         }
@@ -258,7 +254,7 @@ bool find(string word)
 }
 
 /**
- * Initializes board with letters.
+ * Initializes grid with letters.
  */
 void initialize(void)
 {
@@ -293,12 +289,12 @@ void initialize(void)
     };
     int n = sizeof(frequencies) / sizeof(float);
 
-    // iterate over board
+    // iterate over grid
     for (int row = 0; row < DIMENSION; row++)
     {
         for (int col = 0; col < DIMENSION; col++)
         {   
-            // generate pseudorandom double in [0, 1)
+            // generate pseudorandom double in [0, 1]
             double d = rand() / (double) RAND_MAX;
 
             // map d onto range of frequencies
@@ -307,7 +303,7 @@ void initialize(void)
                 d -= frequencies[k] / 100;
                 if (d < 0.0 || k == n - 1)
                 {
-                    board[row][col] = 'A' + k;
+                    grid[row][col] = 'A' + k;
                     break;
                 }
             }
@@ -329,8 +325,8 @@ bool load(string filename)
     dictionary.size = 0;
 
     // load words from dictionary
-    char buffer[LETTERS+1];
-    while (fgets(buffer, LETTERS+1, file))
+    char buffer[LETTERS + 2];
+    while (fgets(buffer, LETTERS + 2, file))
     {
         // overwrite \n with \0
         buffer[strlen(buffer) - 1] = '\0';
@@ -345,7 +341,7 @@ bool load(string filename)
 
         // copy word into dictionary
         dictionary.words[dictionary.size].found = false;
-        strncpy(dictionary.words[dictionary.size].letters, buffer, LETTERS+1);
+        strncpy(dictionary.words[dictionary.size].letters, buffer, LETTERS + 2);
         dictionary.size++;
     }
 
@@ -354,8 +350,8 @@ bool load(string filename)
 }
 
 /**
- * Looks up word in dictionary.  Iff found, flags word
- * and returns true.
+ * Looks up word in dictionary.  Iff found (for the first time),
+ * flags word and returns true.
  */
 bool lookup(string word)
 {
@@ -365,9 +361,9 @@ bool lookup(string word)
         // check if found
         if (strcmp(dictionary.words[i].letters, word) == 0)
         {
-            // check if already found previously
+            // check if already found
             if (dictionary.words[i].found == true)
-                break;
+                return false;
 
             // flag as found
             dictionary.words[i].found = true;
@@ -382,8 +378,8 @@ bool lookup(string word)
 }
 
 /**
- * Scrambles the board by rotating it 90 degrees clockwise, whereby
- * board[0][0] rotates to board[0][DIMENSION-1]
+ * Scrambles the grid by rotating it 90 degrees clockwise, whereby
+ * grid[0][0] rotates to grid[0][DIMENSION-1]
  */
 void scramble(void)
 {
