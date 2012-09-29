@@ -90,7 +90,7 @@ int main(int argc, string argv[])
 
     // load dictionary
     // http://www.becomeawordgameexpert.com/wordlists.htm
-    if (!load("/home/cs50/pset3/words"))
+    if (!load("/home/jharvard/pset3/words"))
     {
         printf("Could not open dictionary.\n");
         return 1;
@@ -404,11 +404,35 @@ bool lookup(string word)
     return false;
 }
 
+
+
 /**
- * Scrambles the grid by rotating it 90 degrees clockwise, whereby
- * grid[0][0] rotates to grid[0][DIMENSION-1]
+ * Scrambles the grid by rotating it 90 degrees clockwise, whereby grid[0][0]
+ * rotates to grid[0][DIMENSION - 1]
+ *
+ * Best to instruct students to draw out all of the cases for a 4x4 grid to
+ * figure out the math below. Trying to do the rotation in-place is a mess,
+ * since moving one cell requires moving three others (e.g. 0,0 -> 0,3 -> 3,0
+ * -> 3,3).
  */
 void scramble(void)
 {
-    // TODO
+    // build up a new grid with the rotation
+    char rotated_grid[DIMENSION][DIMENSION];
+    for (int row = 0; row < DIMENSION; row++)
+    {
+        for (int col = 0; col < DIMENSION; col++)
+        {
+            rotated_grid[col][DIMENSION - row - 1] = grid[row][col];
+        }
+    }
+
+    // copy the rotated grid into the global grid
+    for (int row = 0; row < DIMENSION; row++)
+    {
+        for (int col = 0; col < DIMENSION; col++)
+        {
+            grid[row][col] = rotated_grid[row][col];
+        }
+    }    
 }

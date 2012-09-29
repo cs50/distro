@@ -42,7 +42,7 @@ bool marks[DIMENSION][DIMENSION];
 typedef struct
 {
     bool found;
-    char letters[LETTERS+1];
+    char letters[LETTERS + 1];
 }
 word;
 
@@ -62,7 +62,6 @@ bool find(string word);
 void initialize(void);
 bool load(string filename);
 bool lookup(string word);
-void scramble(void);
 
 // This is Scramble.
 int main(int argc, string argv[])
@@ -70,7 +69,7 @@ int main(int argc, string argv[])
     // ensure proper usage
     if (argc > 2)
     {
-        printf("Usage: %s [#]\n", argv[0]);
+        printf("Usage: scramble [#]\n");
         return 1;
     }
 
@@ -151,23 +150,12 @@ int main(int argc, string argv[])
         string word = GetString();
         if (word != NULL)
         {
-            // capitalize word
-            for (int i = 0, n = strlen(word); i < n; i++) 
-                word[i] = toupper(word[i]);
-
             // log word
             fprintf(log, "%s\n", word);
 
-            // check whether to scramble grid
-            if (strcmp(word, "SCRAMBLE") == 0)
-                scramble();
-
             // or to look for word on grid and in dictionary
-            else
-            {
-                if (find(word) == true && lookup(word) == true)
-                    score += strlen(word);
-            }
+            if (find(word) == true && lookup(word) == true)
+                score += strlen(word);
         }
     }
 
@@ -237,17 +225,7 @@ bool crawl(string letters, int x, int y)
  */
 void draw(void)
 {
-    printf("\n");
-    for (int row = 0; row < DIMENSION; row++)
-    {
-        printf(" ");
-        for (int col = 0; col < DIMENSION; col++)
-        {
-            printf("%2c", grid[row][col]);
-        }
-        printf("\n");
-    }
-    printf("\n");
+    // TODO
 }
 
 /**
@@ -359,8 +337,8 @@ bool load(string filename)
         for (int i = 0, n = strlen(buffer); i < n; i++)
             buffer[i] = toupper(buffer[i]);
 
-        // ignore SCRAMBLE
-        if (strcmp(buffer, "SCRAMBLE") == 0) 
+        // ignore INSPIRATION
+        if (strcmp(buffer, "INSPIRATION") == 0) 
             continue;
 
         // copy word into dictionary
@@ -379,57 +357,6 @@ bool load(string filename)
  */
 bool lookup(string word)
 {
-    // iterate over words in dictionary
-    for (int i = 0; i < dictionary.size; i++)
-    {
-        // check if found
-        if (strcmp(dictionary.words[i].letters, word) == 0)
-        {
-            // check if already found
-            if (dictionary.words[i].found == true)
-                return false;
-
-            // flag as found
-            dictionary.words[i].found = true;
-
-            // found it!
-            return true;
-        }
-    }
-
-    // fail
+    // TODO
     return false;
-}
-
-
-
-/**
- * Scrambles the grid by rotating it 90 degrees clockwise, whereby grid[0][0]
- * rotates to grid[0][DIMENSION - 1]
- *
- * Best to instruct students to draw out all of the cases for a 4x4 grid to
- * figure out the math below. Trying to do the rotation in-place is a mess,
- * since moving one cell requires moving three others (e.g. 0,0 -> 0,3 -> 3,0
- * -> 3,3).
- */
-void scramble(void)
-{
-    // build up a new grid with the rotation
-    char rotated_grid[DIMENSION][DIMENSION];
-    for (int row = 0; row < DIMENSION; row++)
-    {
-        for (int col = 0; col < DIMENSION; col++)
-        {
-            rotated_grid[col][DIMENSION - row - 1] = grid[row][col];
-        }
-    }
-
-    // copy the rotated grid into the global grid
-    for (int row = 0; row < DIMENSION; row++)
-    {
-        for (int col = 0; col < DIMENSION; col++)
-        {
-            grid[row][col] = rotated_grid[row][col];
-        }
-    }    
 }
