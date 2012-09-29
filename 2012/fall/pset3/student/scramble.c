@@ -108,7 +108,10 @@ int main(int argc, string argv[])
     // open log
     log = fopen("log.txt", "a");
     if (log == NULL)
+    {
+        printf("Could not open log.\n");
         return 1;
+    }
  
     // accept words until timer expires
     while (true)
