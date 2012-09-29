@@ -149,6 +149,7 @@ int main(int argc, string argv[])
         printf("Time:  %d\n\n", end - now);
         
         // prompt for word
+        // if the player wants inspiration, we want to avoid the clear()!
         while (true)
         {
             printf("> ");
@@ -366,8 +367,8 @@ bool load(string filename)
         for (int i = 0, n = strlen(buffer); i < n; i++)
             buffer[i] = toupper(buffer[i]);
 
-        // ignore SCRAMBLE
-        if (strcmp(buffer, "SCRAMBLE") == 0) 
+        // ignore INSPIRATION
+        if (strcmp(buffer, "INSPIRATION") == 0) 
             continue;
 
         // copy word into dictionary
@@ -410,7 +411,11 @@ bool lookup(string word)
 
 /**
  * Looks up word in dictionary. Returns true iff the word has not been found,
- * but does *not* flag the word.
+ * but does *not* flag the word. Needed for discover to work properly, since we
+ * don't want to flag words with which we're about to inspire the player!
+ *
+ * This function needs to be written as a binary search: it goes far too slowly
+ * for discover to work properly if written linearly.
  */
 bool lookup_no_flag(string word)
 {
@@ -419,6 +424,7 @@ bool lookup_no_flag(string word)
 
     while (low <= high)
     {
+        // http://googleresearch.blogspot.com/2006/06/extra-extra-read-all-about-it-nearly.html
         int mid = ((unsigned int)low + (unsigned int)high) / 2;
 
         int comparison = strcmp(word, dictionary.words[mid].letters);
@@ -433,6 +439,10 @@ bool lookup_no_flag(string word)
     return false;
 }
 
+/**
+ * Crawls the grid attempting to find a word of the desired length that is both
+ * in the dictionary and has not yet been found by the player.
+ */
 bool discover(string word, int desired_length, int x, int y)
 {
     int length = strlen(word);
@@ -468,7 +478,7 @@ bool discover(string word, int desired_length, int x, int y)
         }
     }
 
-    // chop current letter off of word
+    // chop current letter off of word to backtrack
     word[length] = '\0';
 
     // unmark location
@@ -524,7 +534,8 @@ void inspire(void)
 }
 
 /**
- * 
+ * Calculates the appropriate score for a word using the static points array
+ * provided in the specification.
  */
 int calculate_score(string word)
 {
@@ -559,8 +570,6 @@ int calculate_score(string word)
 
     int score = 0;
     for (int i = 0; i < strlen(word); i++)
-    {
         score += points[word[i] - 'A'];
-    }
     return score;
 }
