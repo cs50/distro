@@ -90,7 +90,7 @@ int main(int argc, string argv[])
 
     // load dictionary
     // http://www.becomeawordgameexpert.com/wordlists.htm
-    if (!load("./words"))
+    if (!load("/home/cs50/pset3/words"))
     {
         printf("Could not open dictionary.\n");
         return 1;
@@ -108,8 +108,11 @@ int main(int argc, string argv[])
     // open log
     log = fopen("log.txt", "a");
     if (log == NULL)
+    {
+        printf("Could not open log.\n");
         return 1;
- 
+    }
+
     // accept words until timer expires
     while (true)
     {
