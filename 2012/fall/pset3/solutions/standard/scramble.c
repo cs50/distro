@@ -56,17 +56,14 @@ struct
 dictionary;
 
 // prototypes
-int calculate_score(string word);
 void clear(void);
 bool crawl(string word, int x, int y);
-bool discover(string word, int desired_length, int x, int y);
 void draw(void);
 bool find(string word);
 void initialize(void);
-void inspire(void);
 bool load(string filename);
 bool lookup(string word);
-bool lookup_no_flag(string word);
+void scramble(void);
 
 // This is Scramble.
 int main(int argc, string argv[])
@@ -94,7 +91,7 @@ int main(int argc, string argv[])
 
     // load dictionary
     // http://www.becomeawordgameexpert.com/wordlists.htm
-    if (!load("/home/cs50/pset3/words"))
+    if (!load("/home/jharvard/pset3/words"))
     {
         printf("Could not open dictionary.\n");
         return 1;
@@ -116,7 +113,7 @@ int main(int argc, string argv[])
         printf("Could not open log.\n");
         return 1;
     }
- 
+
     // accept words until timer expires
     while (true)
     {
@@ -154,15 +151,10 @@ int main(int argc, string argv[])
         printf("Time:  %d\n\n", end - now);
         
         // prompt for word
-        // if the player wants inspiration, we want to avoid the clear()!
-        while (true)
+        printf("> ");
+        string word = GetString();
+        if (word != NULL)
         {
-            printf("> ");
-            string word = GetString();
-
-            if (word == NULL)
-                break;
-
             // capitalize word
             for (int i = 0, n = strlen(word); i < n; i++) 
                 word[i] = toupper(word[i]);
@@ -170,16 +162,15 @@ int main(int argc, string argv[])
             // log word
             fprintf(log, "%s\n", word);
 
-            // check whether to inspire user
-            if (strcmp(word, "INSPIRATION") == 0)
-                inspire();
+            // check whether to scramble grid
+            if (strcmp(word, "SCRAMBLE") == 0)
+                scramble();
 
             // or to look for word on grid and in dictionary
             else
             {
                 if (find(word) == true && lookup(word) == true)
-                    score += calculate_score(word);
-                break;
+                    score += strlen(word);
             }
         }
     }
@@ -188,47 +179,6 @@ int main(int argc, string argv[])
     fclose(log);
 
     return 0;
-}
-
-/**
- * Calculates the appropriate score for a word using the static points array
- * provided in the specification.
- */
-int calculate_score(string word)
-{
-    int points[] = {
-        1,  // a
-        4,  // b
-        4,  // c
-        2,  // d
-        1,  // e
-        4,  // f
-        3,  // g
-        3,  // h
-        1,  // i
-        10, // j
-        5,  // k
-        2,  // l
-        4,  // m
-        2,  // n
-        1,  // o
-        4,  // p
-        10, // q
-        1,  // r
-        1,  // s
-        1,  // t
-        2,  // u
-        5,  // v
-        4,  // w
-        8,  // x
-        3,  // y
-        10  // z
-    };
-
-    int score = 0;
-    for (int i = 0; i < strlen(word); i++)
-        score += points[word[i] - 'A'];
-    return score;
 }
 
 /**
@@ -278,56 +228,6 @@ bool crawl(string letters, int x, int y)
                 return true;
         }
     }
-
-    // unmark location
-    marks[x][y] = false;
-
-    // fail
-    return false;
-}
-
-/**
- * Crawls the grid attempting to find a word of the desired length that is both
- * in the dictionary and has not yet been found by the player.
- */
-bool discover(string word, int desired_length, int x, int y)
-{
-    // if our word is of the desired length, check if it's in the dictionary
-    int length = strlen(word);
-    if (length == desired_length)
-        return lookup_no_flag(word);
-
-    // don't fall off the grid!
-    if (x < 0 || x >= DIMENSION)
-        return false;
-    if (y < 0 || y >= DIMENSION)
-        return false;
-
-    // been here before!
-    if (marks[x][y] == true)
-        return false;
-
-    // add current letter to word
-    word[length] = grid[x][y];
-    word[length + 1] = '\0';
-
-    // mark location
-    marks[x][y] = true;
-
-    // look left and right for next letter
-    for (int i = -1; i <= 1; i++)
-    {
-        // look down and up for next letter
-        for (int j = -1; j <= 1; j++)
-        {
-            // check grid[x + i][y + j] for next letter
-            if (discover(word, desired_length, x + i, y + j))
-                return true;
-        }
-    }
-
-    // chop current letter off of word to backtrack
-    word[length] = '\0';
 
     // unmark location
     marks[x][y] = false;
@@ -440,52 +340,6 @@ void initialize(void)
 }
 
 /**
- * Inspires the user by finding up to three words that haven't yet been found:
- * one of five letters (if any), one of four letters (if any), and one of three
- * letters (if any).
- */
-void inspire(void)
-{
-    for (int length = 3; length <= 5; length++)
-    {
-        // use this to track a successful discovery so that we can break out of
-        // both of the inner for loops below
-        bool success = false;
-
-        // search grid for word of length "length"
-        for (int row = 0; row < DIMENSION; row++)
-        {
-            for (int col = 0; col < DIMENSION; col++)
-            {
-                // reset marks
-                for (int i = 0; i < DIMENSION; i++)
-                {
-                    for (int j = 0; j < DIMENSION; j++)
-                        marks[i][j] = false;
-                }
-
-                // create a char array to contain the discovered word
-                // remember to properly null-terminate!
-                char string[length + 1];
-                string[0] = '\0';
-
-                // start looking at row/col for a string of length "length"
-                // result will be stored in "string"
-                success = discover(string, length, row, col);
-                if (success)
-                {
-                    printf("%s\n", string);
-                    break;
-                }
-            }
-
-            if (success)
-                break;
-        }
-    }
-}
-
-/**
  * Loads words from dictionary with given filename into a global array.
  */
 bool load(string filename)
@@ -509,8 +363,8 @@ bool load(string filename)
         for (int i = 0, n = strlen(buffer); i < n; i++)
             buffer[i] = toupper(buffer[i]);
 
-        // ignore INSPIRATION
-        if (strcmp(buffer, "INSPIRATION") == 0) 
+        // ignore SCRAMBLE
+        if (strcmp(buffer, "SCRAMBLE") == 0) 
             continue;
 
         // copy word into dictionary
@@ -552,34 +406,32 @@ bool lookup(string word)
 }
 
 /**
- * Looks up word in dictionary. Returns true iff the word has not been found,
- * but does *not* flag the word. Needed for discover to work properly, since we
- * don't want to flag words with which we're about to inspire the player!
+ * Scrambles the grid by rotating it 90 degrees clockwise, whereby grid[0][0]
+ * rotates to grid[0][DIMENSION - 1]
  *
- * This function needs to be written as a binary search: it goes far too slowly
- * for discover to work properly if written linearly.
+ * Best to instruct students to draw out all of the cases for a 4x4 grid to
+ * figure out the math below. Trying to do the rotation in-place is a mess,
+ * since moving one cell requires moving three others (e.g. 0,0 -> 0,3 -> 3,0
+ * -> 3,3).
  */
-bool lookup_no_flag(string word)
+void scramble(void)
 {
-    int low = 0;
-    int high = dictionary.size - 1;
-
-    while (low <= high)
+    // build up a new grid with the rotation
+    char rotated_grid[DIMENSION][DIMENSION];
+    for (int row = 0; row < DIMENSION; row++)
     {
-        // http://googleresearch.blogspot.com/2006/06/extra-extra-read-all-about-it-nearly.html
-        int mid = ((unsigned int)low + (unsigned int)high) / 2;
-
-        // see man page for strcmp for details on its return values!
-        // make sure to test for >/< 0, not ==/!= 1
-        int comparison = strcmp(word, dictionary.words[mid].letters);
-        if (comparison == 0)
-            return !dictionary.words[mid].found;
-        else if (comparison > 0)
-            low = mid + 1;
-        else
-            high = mid - 1;
+        for (int col = 0; col < DIMENSION; col++)
+        {
+            rotated_grid[col][DIMENSION - row - 1] = grid[row][col];
+        }
     }
 
-    // fail
-    return false;
+    // copy the rotated grid into the global grid
+    for (int row = 0; row < DIMENSION; row++)
+    {
+        for (int col = 0; col < DIMENSION; col++)
+        {
+            grid[row][col] = rotated_grid[row][col];
+        }
+    }    
 }
