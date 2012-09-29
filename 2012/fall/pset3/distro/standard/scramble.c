@@ -42,7 +42,7 @@ bool marks[DIMENSION][DIMENSION];
 typedef struct
 {
     bool found;
-    char letters[LETTERS+1];
+    char letters[LETTERS + 1];
 }
 word;
 
@@ -378,7 +378,7 @@ bool lookup(string word)
 
 /**
  * Scrambles the grid by rotating it 90 degrees clockwise, whereby
- * grid[0][0] rotates to grid[0][DIMENSION-1]
+ * grid[0][0] rotates to grid[0][DIMENSION - 1].
  */
 void scramble(void)
 {
