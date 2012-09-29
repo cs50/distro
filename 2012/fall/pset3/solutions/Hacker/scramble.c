@@ -13,6 +13,7 @@
  
 #include <cs50.h>
 #include <ctype.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -28,6 +29,10 @@
 
 // maximum number of letters in any word
 #define LETTERS 29
+
+// default dictionary
+// http://www.becomeawordgameexpert.com/wordlists.htm
+#define DICTIONARY "words"
 
 // for logging
 FILE* log;
@@ -74,7 +79,7 @@ int main(int argc, string argv[])
     // ensure proper usage
     if (argc > 2)
     {
-        printf("Usage: scramble [#]\n");
+        printf("Usage: %s [#]\n", basename(argv[0]));
         return 1;
     }
 
@@ -92,9 +97,13 @@ int main(int argc, string argv[])
     else
         srand(time(NULL));
 
+    // determine path to dictionary
+    string directory = dirname(argv[0]);
+    char path[strlen(directory) + 1 + strlen(DICTIONARY) + 1];
+    sprintf(path, "%s/%s", directory, DICTIONARY);
+
     // load dictionary
-    // http://www.becomeawordgameexpert.com/wordlists.htm
-    if (!load("/home/jharvard/pset3/words"))
+    if (!load(path))
     {
         printf("Could not open dictionary.\n");
         return 1;
@@ -116,6 +125,9 @@ int main(int argc, string argv[])
         printf("Could not open log.\n");
         return 1;
     }
+
+    //
+    bool inspired = false;
  
     // accept words until timer expires
     while (true)
@@ -153,16 +165,18 @@ int main(int argc, string argv[])
         // report time remaining
         printf("Time:  %d\n\n", end - now);
         
-        // prompt for word
-        // if the player wants inspiration, we want to avoid the clear()!
-        while (true)
+        // inspire as needed
+        if (inspired)
         {
-            printf("> ");
-            string word = GetString();
+            inspire();
+            inspired = false;
+        }
 
-            if (word == NULL)
-                break;
-
+        // prompt for word
+        printf("> ");
+        string word = GetString();
+        if (word != NULL)
+        {
             // capitalize word
             for (int i = 0, n = strlen(word); i < n; i++) 
                 word[i] = toupper(word[i]);
@@ -172,14 +186,13 @@ int main(int argc, string argv[])
 
             // check whether to inspire user
             if (strcmp(word, "INSPIRATION") == 0)
-                inspire();
+                inspired = true;
 
             // or to look for word on grid and in dictionary
             else
             {
                 if (find(word) == true && lookup(word) == true)
                     score += calculate_score(word);
-                break;
             }
         }
     }
@@ -474,11 +487,10 @@ void inspire(void)
                 success = discover(string, length, row, col);
                 if (success)
                 {
-                    printf("%s\n", string);
+                    printf("%s ", string);
                     break;
                 }
             }
-
             if (success)
                 break;
         }

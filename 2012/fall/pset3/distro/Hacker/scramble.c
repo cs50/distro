@@ -12,6 +12,7 @@
  
 #include <cs50.h>
 #include <ctype.h>
+#include <libgen.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -27,6 +28,10 @@
 
 // maximum number of letters in any word
 #define LETTERS 29
+
+// default dictionary
+// http://www.becomeawordgameexpert.com/wordlists.htm
+#define DICTIONARY "words"
 
 // for logging
 FILE* log;
@@ -69,7 +74,7 @@ int main(int argc, string argv[])
     // ensure proper usage
     if (argc > 2)
     {
-        printf("Usage: scramble [#]\n");
+        printf("Usage: %s [#]\n", basename(argv[0]));
         return 1;
     }
 
@@ -87,9 +92,13 @@ int main(int argc, string argv[])
     else
         srand(time(NULL));
 
+    // determine path to dictionary
+    string directory = dirname(argv[0]);
+    char path[strlen(directory) + 1 + strlen(DICTIONARY) + 1];
+    sprintf(path, "%s/%s", directory, DICTIONARY);
+
     // load dictionary
-    // http://www.becomeawordgameexpert.com/wordlists.htm
-    if (!load("./words"))
+    if (!load(path))
     {
         printf("Could not open dictionary.\n");
         return 1;
