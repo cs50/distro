@@ -1,7 +1,8 @@
 /***************************************************************************
  * scramble.c
  *
- * Problem Set 3
+ * David J. Malan <malan@harvard.edu>
+ * Nate Hardison <nate@cs.harvard.edu>
  *
  * Implements Scramble with CS50.
  *
@@ -42,7 +43,7 @@ bool marks[DIMENSION][DIMENSION];
 typedef struct
 {
     bool found;
-    char letters[LETTERS+1];
+    char letters[LETTERS + 1];
 }
 word;
 
@@ -70,7 +71,7 @@ int main(int argc, string argv[])
     // ensure proper usage
     if (argc > 2)
     {
-        printf("Usage: %s [#]\n", argv[0]);
+        printf("Usage: scramble [#]\n");
         return 1;
     }
 
@@ -90,7 +91,7 @@ int main(int argc, string argv[])
 
     // load dictionary
     // http://www.becomeawordgameexpert.com/wordlists.htm
-    if (!load("./words"))
+    if (!load("/home/cs50/pset3/words"))
     {
         printf("Could not open dictionary.\n");
         return 1;
@@ -108,8 +109,11 @@ int main(int argc, string argv[])
     // open log
     log = fopen("log.txt", "a");
     if (log == NULL)
+    {
+        printf("Could not open log.\n");
         return 1;
- 
+    }
+
     // accept words until timer expires
     while (true)
     {
@@ -284,32 +288,32 @@ void initialize(void)
 {
     // http://en.wikipedia.org/wiki/Letter_frequency
     float frequencies[] = {
-     8.167,  // a
-     1.492,  // b
-     2.782,  // c
-     4.253,  // d
-     12.702, // e
-     2.228,  // f
-     2.015,  // g
-     6.094,  // h
-     6.966,  // i
-     0.153,  // j
-     0.747,  // k
-     4.025,  // l
-     2.406,  // m
-     6.749,  // n
-     7.507,  // o
-     1.929,  // p
-     0.095,  // q
-     5.987,  // r
-     6.327,  // s
-     9.056,  // t
-     2.758,  // u
-     1.037,  // v
-     2.365,  // w
-     0.150,  // x
-     1.974,  // y
-     0.074   // z
+        8.167,  // a
+        1.492,  // b
+        2.782,  // c
+        4.253,  // d
+        12.702, // e
+        2.228,  // f
+        2.015,  // g
+        6.094,  // h
+        6.966,  // i
+        0.153,  // j
+        0.747,  // k
+        4.025,  // l
+        2.406,  // m
+        6.749,  // n
+        7.507,  // o
+        1.929,  // p
+        0.095,  // q
+        5.987,  // r
+        6.327,  // s
+        9.056,  // t
+        2.758,  // u
+        1.037,  // v
+        2.365,  // w
+        0.150,  // x
+        1.974,  // y
+        0.074   // z
     };
     int n = sizeof(frequencies) / sizeof(float);
 
@@ -400,8 +404,6 @@ bool lookup(string word)
     // fail
     return false;
 }
-
-
 
 /**
  * Scrambles the grid by rotating it 90 degrees clockwise, whereby grid[0][0]
