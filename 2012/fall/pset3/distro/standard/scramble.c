@@ -163,10 +163,6 @@ int main(int argc, string argv[])
         string word = GetString();
         if (word != NULL)
         {
-            // capitalize word
-            for (int i = 0, n = strlen(word); i < n; i++) 
-                word[i] = toupper(word[i]);
-
             // log word
             fprintf(log, "%s\n", word);
 
