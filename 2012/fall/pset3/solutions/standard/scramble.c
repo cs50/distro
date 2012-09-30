@@ -392,22 +392,33 @@ bool load(string filename)
  */
 bool lookup(string word)
 {
-    // iterate over words in dictionary
-    for (int i = 0; i < dictionary.size; i++)
+    int low = 0;
+    int high = dictionary.size - 1;
+
+    while (low <= high)
     {
-        // check if found
-        if (strcmp(dictionary.words[i].letters, word) == 0)
+        // http://googleresearch.blogspot.com/2006/06/extra-extra-read-all-about-it-nearly.html
+        int mid = ((unsigned int)low + (unsigned int)high) / 2;
+
+        // see man page for strcmp for details on its return values!
+        // make sure to test for >/< 0, not ==/!= 1
+        int comparison = strcmp(word, dictionary.words[mid].letters);
+        if (comparison == 0)
         {
             // check if already found
-            if (dictionary.words[i].found == true)
+            if (dictionary.words[mid].found)
                 return false;
 
             // flag as found
-            dictionary.words[i].found = true;
+            dictionary.words[mid].found = true;
 
             // found it!
             return true;
         }
+        else if (comparison > 0)
+            low = mid + 1;
+        else
+            high = mid - 1;
     }
 
     // fail
