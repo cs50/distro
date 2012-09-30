@@ -48,7 +48,7 @@ int main(int argc, string argv[])
 
     // encrypt the plaintext in place, tracking letters seen to skip spaces
     int num_letters_seen = 0;
-    for (int i = 0; i < strlen(message); i++)
+    for (int i = 0, n = strlen(message); i < n; i++)
     {
         // only encrypt letters, not other chars (e.g., digits)
         if (isalpha(message[i]))

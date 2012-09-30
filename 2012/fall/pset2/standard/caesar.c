@@ -41,7 +41,9 @@ int main(int argc, string argv[])
     while (message == NULL);
 
     // encrypt the plaintext in place
-    for (int i = 0; i < strlen(message); i++)
+    // strlen won't get optimized out of the condition here, since we're
+    // modifying the string, so best to pull it into a separate variable!
+    for (int i = 0, n = strlen(message); i < n; i++)
     {
         // only encrypt letters, not other chars (e.g., digits)
         if (isupper(message[i]))
