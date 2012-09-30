@@ -1,4 +1,4 @@
-TARGETS = caesar vigenere
+TARGETS = caesar caesar_2 vigenere vigenere_2
 
 default: $(TARGETS)
 
