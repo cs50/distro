@@ -116,7 +116,7 @@ int main(int argc, string argv[])
     int end = time(NULL) + DURATION;
 
     // open log
-    log = fopen("log.txt", "a");
+    log = fopen("./log.txt", "a");
     if (log == NULL)
     {
         printf("Could not open log.\n");
