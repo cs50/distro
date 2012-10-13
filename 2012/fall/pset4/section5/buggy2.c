@@ -44,4 +44,3 @@ int main(int argc, char* argv[])
     binky(i);
     return 0;
 }
-

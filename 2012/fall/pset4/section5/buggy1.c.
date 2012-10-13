@@ -3,7 +3,6 @@
 
 int main(int argc, char* argv[])
 {
-
     if (strcmp("CS50 rocks", argv[1]) == 0)
     {
         printf("You get an A!\n");
@@ -12,6 +11,5 @@ int main(int argc, char* argv[])
     {
         printf("You get a D :-(\n");
     }
-
     return 0;
 }
