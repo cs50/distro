@@ -23,7 +23,9 @@
 #define APP0_1 0xe0
 #define APP1_1 0xe1
 
-// 
+/**
+ * Returns true iff a JPEG header.
+ */
 bool is_jpeg_header(unsigned char header[])
 {
     return (header[0] == SOI_0 && header[1] == SOI_1 &&
