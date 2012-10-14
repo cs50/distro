@@ -1,9 +1,8 @@
-
 /****************************************************************************
  * resize.c
  *
- * Computer Science 50
- * Problem Set 5
+ * David J. Malan
+ * malan@harvard.edu
  *
  * Resizes a BMP by a factor of n on (0, 100].
  ***************************************************************************/
@@ -15,14 +14,12 @@
 
 #include "bmp.h"
 
-
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     // ensure proper usage
     if (argc != 4)
     {
-        printf("Usage: resize n infile outfile\n");
+        fprintf(stderr, "Usage: resize n infile outfile\n");
         return 1;
     }
 
@@ -31,7 +28,7 @@ main(int argc, char *argv[])
     {
         if (!isdigit(argv[1][i]))
         {
-            printf("n, the resize factor, must be an integer.\n");
+            fprintf(stderr, "n, the resize factor, must be an integer.\n");
             return 5;
         }
     }
@@ -40,22 +37,22 @@ main(int argc, char *argv[])
     int n = atoi(argv[1]);
 
     // remember filenames
-    char *infile = argv[2];
-    char *outfile = argv[3];
+    char* infile = argv[2];
+    char* outfile = argv[3];
 
     // range check: n must be on (0, 100]
     if (n <= 0 || n > 100)
     {
-        printf("n, the resize factor, must satisfy 0 < n <= 100.\n");
-        return 6;
+        fprintf(stderr, "n, the resize factor, must satisfy 0 < n <= 100.\n");
+        return 1;
     }
 
     // open input file 
-    FILE *inptr = fopen(infile, "r");
+    FILE* inptr = fopen(infile, "r");
     if (inptr == NULL)
     {
-        printf("Could not open %s.\n", infile);
-        return 2;
+        fprintf(stderr, "Could not open %s.\n", infile);
+        return 1;
     }
 
     // open output file
@@ -63,7 +60,7 @@ main(int argc, char *argv[])
     if (outptr == NULL)
     {
         fprintf(stderr, "Could not create %s.\n", outfile);
-        return 3;
+        return 1;
     }
 
     // read infile's BITMAPFILEHEADER
@@ -79,7 +76,7 @@ main(int argc, char *argv[])
         bi.biBitCount != 24 || bi.biCompression != 0)
     {
         fprintf(stderr, "Unsupported file format.\n");
-        return 4;
+        return 1;
     }
 
     // dimensions of original for future reference
@@ -116,7 +113,7 @@ main(int argc, char *argv[])
 
         // check if memory was properly allocated
         if (currRow == NULL)
-            return 7;
+            return 1;
 
         // iterate over pixels in scanline
         for (int j = 0; j < oldWidth; j++)
@@ -165,4 +162,3 @@ main(int argc, char *argv[])
     // kthxbai
     return 0;
 }
-
