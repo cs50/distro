@@ -1,8 +1,7 @@
 /****************************************************************************
  * resize.c
  *
- * Computer Science 50
- * Problem Set 5
+ * CS50 Staff
  *
  * Resizes a BMP by a factor of n on (0.0, 100.0).
  ***************************************************************************/
@@ -19,8 +18,8 @@ int main(int argc, char* argv[])
     // ensure proper usage
     if (argc != 4)
     {
-	 printf("Usage: resize f infile outfile\n");
-	 return 1;
+        printf("Usage: resize f infile outfile\n");
+        return 1;
     }
 
     // ensure resize factor is a float between 0.0 and 100.0
@@ -29,11 +28,11 @@ int main(int argc, char* argv[])
         if (!isdigit(argv[1][i]) && argv[1][i] != '.')
         {
             printf("the second argument must be an integer.\n");
-            return 5;
+            return 1;
         }
     }
 
-    // initialize resize factor.
+    // initialize resize factor
     float factor = atof(argv[1]);
 
     // remember filenames
@@ -44,7 +43,7 @@ int main(int argc, char* argv[])
     if (factor <= 0 || factor >= 100)
     {
         printf("The resize factor, must satisfy 0 < n <= 100.\n");
-        return 6;
+        return 1;
     }
 
     // open input file 
@@ -52,7 +51,7 @@ int main(int argc, char* argv[])
     if (inptr == NULL)
     {
         printf("Could not open %s.\n", infile);
-        return 2;
+        return 1;
     }
 
     // open output file
@@ -60,7 +59,7 @@ int main(int argc, char* argv[])
     if (outptr == NULL)
     {
         fprintf(stderr, "Could not create %s.\n", outfile);
-        return 3;
+        return 1;
     }
 
     // read infile's BITMAPFILEHEADER
@@ -76,12 +75,11 @@ int main(int argc, char* argv[])
         bi.biBitCount != 24 || bi.biCompression != 0)
     {
         fprintf(stderr, "Unsupported file format.\n");
-        return 4;
+        return 1;
     }
 
-    // dimensions of original for future reference
+    // width of original for future reference
     int oldWidth  = bi.biWidth;
-    int oldHeight = abs(bi.biHeight);
 
     // determine padding for scanlines of original
     int oldPadding =  (4 - (oldWidth * sizeof(RGBTRIPLE)) % 4) % 4;
@@ -107,7 +105,7 @@ int main(int argc, char* argv[])
     // rowNum states which row is being stored.
     RGBTRIPLE* currRow = malloc(oldWidth * sizeof(RGBTRIPLE));
     if (currRow == NULL)
-        return 7;
+        return 1;
     int rowNum = -1;
 
     // iterate over every pixel in outfile, and find and write
@@ -148,7 +146,7 @@ int main(int argc, char* argv[])
             fputc(0x00, outptr);
     }
 
-    free( currRow );
+    free(currRow);
     
     // close infile
     fclose(inptr);
