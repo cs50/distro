@@ -35,13 +35,13 @@ bool is_jpeg_header(unsigned char header[])
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2)
+    if (argc != 1)
     {
-        printf("Usage: recover rawfile\n");
+        printf("Usage: recover\n");
         return 1;
     }
     
-    FILE* rawfile = fopen(argv[1], "r");
+    FILE* rawfile = fopen("card.raw", "r");
     if (rawfile == NULL)
     {
 		printf("recover: %s: No such file\n", argv[1]);
