@@ -68,7 +68,7 @@ bool enqueue(char* str)
  * No one-liner here since we can't do a postfix mod and the dequeue
  * doesn't depend on the size of the queue anyway!
  */
-char* dequeue()
+char* dequeue(void)
 {
     // if nothing's in our queue, we can't retrieve anything!
     if (q.size == 0)
@@ -94,6 +94,10 @@ char* dequeue()
  */
 int main(void)
 {
+    // initialize the queue
+    q.head = 0;
+    q.size = 0;
+
     printf("Enqueueing %d strings...", CAPACITY);
     for (int i = 0; i < CAPACITY; i++)
     {
