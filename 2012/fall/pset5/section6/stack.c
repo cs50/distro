@@ -60,7 +60,7 @@ bool push(char* str)
  *
  * Nice one-liner: return s.strings[--s.size];
  */
-char* pop()
+char* pop(void)
 {
     // if nothing's in our stack, we can't retrieve anything!
     if (s.size == 0)
@@ -82,6 +82,9 @@ char* pop()
  */
 int main(void)
 {
+    // initialize the stack
+    s.size = 0;
+
     printf("Pushing %d strings onto the stack...", CAPACITY);
     for (int i = 0; i < CAPACITY; i++)
     {
