@@ -157,7 +157,7 @@ int main(void)
             assert(enqueue("cs50!"));
         }
     }
-    printf("done!\n");
+    printf("good!\n");
 
     printf("\n********\nSuccess!\n********\n");
 
