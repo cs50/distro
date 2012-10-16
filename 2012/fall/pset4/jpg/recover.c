@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// the default file to use for recovering JPEGs
-#define DEFAULT_RAW_FILENAME "card.raw"
+// name of the RAW file from which to recover JPEGs
+#define RAW_FILENAME "card.raw"
 
 // length of the output filenames (e.g. "001.jpg")
 #define JPEG_FILENAME_LENGTH 8
@@ -46,23 +46,16 @@ bool is_jpeg_header(unsigned char header[])
 int main(int argc, char* argv[])
 {
     // we'll use an optional raw_file argument
-    if (argc > 2)
+    if (argc != 1)
     {
-        printf("Usage: recover [raw_file=DEFAULT_RAW_FILENAME]\n");
+        printf("Usage: recover\n");
         return 1;
     }
-    
-    // nb: students don't need to handle a filename from the command-line
-    char* raw_filename = DEFAULT_RAW_FILENAME;
-    if (argc == 2)
-    {
-        raw_filename = argv[1];
-    }
 
-    FILE* raw_file = fopen(raw_filename, "r");
+    FILE* raw_file = fopen(RAW_FILENAME, "r");
     if (raw_file == NULL)
     {
-		printf("recover: %s: No such file\n", raw_filename);
+		printf("recover: %s: No such file\n", RAW_FILENAME);
 		return 1;
     }
 
