@@ -39,6 +39,11 @@ node* first = NULL;
 static node* build_node(int i)
 {
     node* new_node = malloc(sizeof(node));
+    if (new_node == NULL)
+    {
+        printf("sll: error: Out of heap memory\n");
+        exit(1);
+    }
     new_node->i = i;
     new_node->next = NULL;
     return new_node;
@@ -62,7 +67,7 @@ void push(int i)
  * Deletes the first node from the list, returning the int that it
  * contained. Note that the list *cannot* be empty!
  */
-int pop()
+int pop(void)
 {
     // pull the first node out of the list
     node* n = first;
@@ -205,7 +210,7 @@ bool position(int i)
 /**
  * Determines the length of the linked list.
  */
-int length()
+int length(void)
 {
     int length = 0;
     for (node* n = first; n != NULL; n = n->next)
@@ -218,7 +223,7 @@ int length()
 /**
  * Iterates through the list one node at a time, printing each node's int.
  */
-void print_list()
+void print_list(void)
 {
     printf("\nLIST IS NOW: ");
     for (node* n = first; n != NULL; n = n->next)
