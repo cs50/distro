@@ -30,15 +30,17 @@ typedef struct
 }
 queue;
 
-// global variable for this program's one queue
+// declare a queue (as a global variable)
 queue q;
 
 /**
  * Puts a new element into the queue into the "end" of the data structure
  * so that it will be retrived after the other elements already in the
  * queue.
+ *
+ * One-liner: q.strings[(q.head + q.size++) % CAPACITY] = str;
  */
-bool enqueue(char* string)
+bool enqueue(char* str)
 {
     // if we're at capacity, we can't add anything more to our queue
     if (q.size == CAPACITY)
@@ -47,10 +49,10 @@ bool enqueue(char* string)
     }
 
     // calculate the index of the "last" slot in the queue
-    int index = (q.head + q.size) % CAPACITY;
+    int last = (q.head + q.size) % CAPACITY;
 
     // add the new element to our queue
-    q.strings[index] = string;
+    q.strings[last] = str;
 
     // adjust the size appropriately
     q.size++;
@@ -62,6 +64,9 @@ bool enqueue(char* string)
  * Retrieves ("dequeues") the first element in the queue, following the
  * the "first-in, first-out" (FIFO) ordering of the data structure.
  * Reduces the size of the queue and adjusts the head to the next element.
+ *
+ * No one-liner here since we can't do a postfix mod and the dequeue
+ * doesn't depend on the size of the queue anyway!
  */
 char* dequeue()
 {
@@ -71,8 +76,8 @@ char* dequeue()
         return NULL;
     }
 
-    // grab the last string in our stack
-    char* last = q.strings[q.head];
+    // grab the first element in our queue
+    char* first = q.strings[q.head];
 
     // adjust the head of our queue to point to the next element
     // wrap back to the beginning if necessary
@@ -81,7 +86,7 @@ char* dequeue()
     // adjust the size appropriately
     q.size--;
 
-    return last;
+    return first;
 }
 
 /**
