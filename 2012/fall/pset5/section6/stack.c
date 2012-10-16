@@ -34,9 +34,9 @@ stack s;
  * Puts a new element into the stack onto the "top" of the data structure
  * so that it will be retrived prior to the elements already in the stack.
  *
- * Nice one-liner: s.strings[s.size++] = string;
+ * Nice one-liner: s.strings[s.size++] = str;
  */
-bool push(char* string)
+bool push(char* str)
 {
     // if we're at capacity, we can't add anything more to our stack
     if (s.size == CAPACITY)
@@ -45,7 +45,7 @@ bool push(char* string)
     }
 
     // add the new element to our stack
-    s.strings[s.size] = string;
+    s.strings[s.size] = str;
 
     // adjust the size appropriately
     s.size++;
