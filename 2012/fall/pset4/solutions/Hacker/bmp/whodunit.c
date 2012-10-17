@@ -11,9 +11,7 @@
 
 #include "bmp.h"
 
-
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     // ensure proper usage
     if (argc != 3)
@@ -104,4 +102,3 @@ main(int argc, char *argv[])
     // that's all folks
     return 0;
 }
-
