@@ -3,7 +3,9 @@
  *
  * Nate Hardison <nate@cs.harvard.edu>
  *
- * Implements a simple stack structure for char* s.
+ * Implements a simple stack structure for char* s. This version uses
+ * dynamic, heap-allocated storage for the char* s instead of a
+ * statically-sized stack array.
  ************************************************************************/
 
 // for strdup() in the testing code
@@ -15,20 +17,39 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CAPACITY 10
+#define INITIAL_CAPACITY 5
+#define TEST_CAPACITY 10
 
 typedef struct
 {
-    // storage for the elements in the stack
-    char* strings[CAPACITY];
+    // dynamic storage for the elements in the stack
+    char** strings;
 
     // the number of elements currently in the stack
     int size;
+
+    // the allocated capacity of the stack
+    int capacity;
 }
 stack;
 
 // declare a stack (as a global variable)
 stack s;
+
+/**
+ * Expands the stack's capacity to twice its existing capacity. Returns
+ * false if the expansion failed due to lack of heap memory, otherwise
+ * returns true.
+ */
+bool expand(void)
+{
+    s.capacity *= 2;
+
+    // make sure to capture the return value of realloc!
+    s.strings = realloc(s.strings, s.capacity * sizeof(char*));
+
+    return (s.strings != NULL);
+}
 
 /**
  * Puts a new element into the stack onto the "top" of the data structure
@@ -39,9 +60,13 @@ stack s;
 bool push(char* str)
 {
     // if we're at capacity, we can't add anything more to our stack
-    if (s.size == CAPACITY)
+    if (s.size == s.capacity)
     {
-        return false;
+        // if the expansion fails, notify caller
+        if (!expand())
+        {
+            return false;
+        }
     }
 
     // add the new element to our stack
@@ -84,9 +109,11 @@ int main(void)
 {
     // initialize the stack
     s.size = 0;
+    s.capacity = INITIAL_CAPACITY;
+    s.strings = malloc(s.capacity * sizeof(char*));
 
-    printf("Pushing %d strings onto the stack...", CAPACITY);
-    for (int i = 0; i < CAPACITY; i++)
+    printf("Pushing %d strings onto the stack...", TEST_CAPACITY);
+    for (int i = 0; i < TEST_CAPACITY; i++)
     {
         char str[12];
         sprintf(str, "%d", i);
@@ -94,27 +121,23 @@ int main(void)
     }
     printf("done!\n");
 
-    printf("Making sure that the stack size is indeed %d...", CAPACITY);
-    assert(s.size == CAPACITY);
-    printf("good!\n");
-
-    printf("Making sure that push() now returns false...");
-    assert(!push("too much!"));
+    printf("Making sure that the stack size is indeed %d...", TEST_CAPACITY);
+    assert(s.size == TEST_CAPACITY);
     printf("good!\n");
 
     printf("Popping everything off of the stack...");
-    char* str_array[CAPACITY];
-    for (int i = 0; i < CAPACITY; i++)
+    char* str_array[TEST_CAPACITY];
+    for (int i = 0; i < TEST_CAPACITY; i++)
     {
         str_array[i] = pop();
     }
     printf("done!\n");
 
     printf("Making sure that pop() returned values in LIFO order...");
-    for (int i = 0; i < CAPACITY; i++)
+    for (int i = 0; i < TEST_CAPACITY; i++)
     {
         char str[12];
-        sprintf(str, "%d", CAPACITY - i - 1);
+        sprintf(str, "%d", TEST_CAPACITY - i - 1);
         assert(strcmp(str_array[i], str) == 0);
         free(str_array[i]);
     }
@@ -129,6 +152,9 @@ int main(void)
     printf("good!\n");
 
     printf("\n********\nSuccess!\n********\n");
+
+    // clean up
+    free(s.strings);
 
     return 0;
 }
