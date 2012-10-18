@@ -40,7 +40,9 @@ queue;
 queue q;
 
 /**
- * Expands the queue's capacity to twice its existing capacity.
+ * Expands the queue's capacity to twice its existing capacity. Returns
+ * false if the expansion failed due to lack of heap memory, otherwise
+ * returns true.
  *
  * The trick here is that we can't just realloc(capacity * 2) and call it
  * a day. Here's why. If we had a queue of capacity 5 and we'd made a
@@ -68,7 +70,7 @@ queue q;
  *    ^
  *   head
  */
-void expand(void)
+bool expand(void)
 {
     // double the queue's capacity
     q.capacity *= 2;
@@ -76,6 +78,10 @@ void expand(void)
     // create a new array of elements for the queue
     // don't use realloc since we'll need to manually shift elems over
     char** new_strings = malloc(q.capacity * sizeof(char*));
+    if (new_strings == NULL)
+    {
+        return false;
+    }
 
     // copy the "first" elements in our queue to the front of the new array
     memcpy(new_strings, q.strings + q.head, (q.size - q.head) * sizeof(char*));
@@ -89,6 +95,8 @@ void expand(void)
     
     // reset our head pointer
     q.head = 0;
+
+    return true;
 }
 
 /**
@@ -98,12 +106,15 @@ void expand(void)
  *
  * One-liner: q.strings[(q.head + q.size++) % CAPACITY] = str;
  */
-void enqueue(char* str)
+bool enqueue(char* str)
 {
     // if we're at capacity, expand!
     if (q.size == q.capacity)
     {
-        expand();
+        if (!expand())
+        {
+            return false;
+        }
     }
 
     // calculate the index of the "last" slot in the queue
@@ -114,6 +125,8 @@ void enqueue(char* str)
 
     // adjust the size appropriately
     q.size++;
+
+    return true;
 }
 
 /**
