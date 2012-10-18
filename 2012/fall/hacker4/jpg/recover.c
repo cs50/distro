@@ -10,46 +10,57 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// length of the output filenames (e.g. "001.jpg")
-#define FILENAME_LENGTH 8
+// name of the RAW file from which to recover JPEGs
+#define RAW_FILENAME "card.raw"
 
-// block size of 
+// length of the output filenames (e.g. "001.jpg")
+#define JPEG_FILENAME_LENGTH 8
+
+// format of the output JPEG filenames
+#define JPEG_FILENAME_FORMAT "%03d.jpg"
+
+// block size of a CF card, in bytes
 #define BLOCK_SIZE 512
 
-// JPEG header format
+// JPEG header bytes specified in the problem set
+// names from http://en.wikipedia.org/wiki/JPEG#Syntax_and_structure
+// (nb: students need not use these names)
 #define SOI_0  0xff
 #define SOI_1  0xd8
-#define APPN_0 0xff
-#define APP0_1 0xe0
-#define APP1_1 0xe1
+#define APPN   0xff
+#define APP0   0xe0
+#define APP1   0xe1
 
 /**
- * Returns true iff a JPEG header.
+ * Returns true iff we've got a JPEG header as defined in the pset
+ * specification. 
  */
 bool is_jpeg_header(unsigned char header[])
 {
-    return (header[0] == SOI_0 && header[1] == SOI_1 &&
-            header[2] == APPN_0 && (header[3] == APP0_1 ||
-                                    header[3] == APP1_1));
+    return (header[0] == SOI_0 &&
+            header[1] == SOI_1 &&
+            header[2] == APPN &&
+            (header[3] == APP0 || header[3] == APP1));
 }
 
 int main(int argc, char* argv[])
 {
+    // we'll use an optional raw_file argument
     if (argc != 1)
     {
         printf("Usage: recover\n");
         return 1;
     }
-    
-    FILE* rawfile = fopen("card.raw", "r");
-    if (rawfile == NULL)
+
+    FILE* raw_file = fopen(RAW_FILENAME, "r");
+    if (raw_file == NULL)
     {
-		printf("recover: %s: No such file\n", argv[1]);
+		printf("recover: %s: No such file\n", RAW_FILENAME);
 		return 1;
     }
 
     // these will track and store each individual JPEG as we find it
-    char jpeg_filename[FILENAME_LENGTH];
+    char jpeg_filename[JPEG_FILENAME_LENGTH];
     int num_jpegs_recovered = 0;
     FILE* jpeg_file = NULL;
 
@@ -60,7 +71,7 @@ int main(int argc, char* argv[])
     // we want to read BLOCK_SIZE bytes into our buffer, no more and no
     // less, since the RAW file is guaranteed to be a multiple of
     // BLOCK_SIZE bytes in length
-    while (fread(buffer, 1, BLOCK_SIZE, rawfile) == BLOCK_SIZE)
+    while (fread(buffer, 1, BLOCK_SIZE, raw_file) == BLOCK_SIZE)
     {
         // check the first 4 bytes of the buffer for a JPEG header
         if (is_jpeg_header(buffer))
@@ -72,13 +83,13 @@ int main(int argc, char* argv[])
             }
 
             // use sprintf to generate a custom filename
-            sprintf(jpeg_filename, "%03d.jpg", num_jpegs_recovered++);
+            sprintf(jpeg_filename, JPEG_FILENAME_FORMAT, num_jpegs_recovered++);
 
             // open up a file for the JPEG we just found using + to create
             jpeg_file = fopen(jpeg_filename, "w+");
             if (jpeg_file == NULL)
             {
-                fclose(rawfile);
+                fclose(raw_file);
                 printf("recover: %s: Error creating file\n", jpeg_filename);
                 return 1;
             }
@@ -91,7 +102,7 @@ int main(int argc, char* argv[])
             if (fwrite(buffer, 1, BLOCK_SIZE, jpeg_file) != BLOCK_SIZE)
             {
                 fclose(jpeg_file);
-                fclose(rawfile);
+                fclose(raw_file);
                 printf("recover: %s: Error writing file\n", jpeg_filename);
                 return 1;
             }
@@ -105,15 +116,15 @@ int main(int argc, char* argv[])
     }
 
     // check to see if we stopped reading because of an error
-    if (ferror(rawfile))
+    if (ferror(raw_file))
     {
-        fclose(rawfile);
+        fclose(raw_file);
         printf("recover: %s: Error reading file\n", argv[1]);
         return 1;
     }
 
     // otherwise, all good!
-    fclose(rawfile);
+    fclose(raw_file);
 
     return 0;
 }
