@@ -9,7 +9,7 @@
  ************************************************************************/
 
 // for strdup() in the testing code
-#define _XOPEN_SOURCE 500
+//#define _XOPEN_SOURCE 500
 
 #include <assert.h>
 #include <stdbool.h>
@@ -273,6 +273,11 @@ int main(void)
         char str[12];
         sprintf(str, "%d", TEST_CAPACITY + i);
         enqueue(strdup(str));
+    }
+
+    for (int i = 0; i < TEST_CAPACITY * 2; i++)
+    {
+        assert(dequeue());
     }
 
     printf("\n********\nSuccess!\n********\n");
