@@ -20,17 +20,50 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// the size of our test list: feel free to adjust as you wish!
 #define TEST_SIZE 10
 
 typedef struct node
 {
+    // the value to store in this node
     int i;
+
+    // the link to the next node in the list
     struct node* next;
 }
 node;
 
 // declare the first node of our list (as a global variable)
 node* first = NULL;
+
+/**
+ * Returns the length of the list.
+ */
+int length(void)
+{
+    int length = 0;
+    for (node* n = first; n != NULL; n = n->next)
+    {
+        length++;
+    }
+    return length;
+}
+
+/**
+ * Returns true if a node in the list contains the value i and false
+ * otherwise.
+ */
+bool contains(int i)
+{
+    for (node* n = first; n != NULL; n = n->next)
+    {
+        if (n->i == i)
+        {
+            return true;
+        }
+    }
+    return false;    
+}
 
 /**
  * Helper function to build a new node. We'll use it in all of our
@@ -50,9 +83,9 @@ static node* build_node(int i)
 }
 
 /**
- * Prepends a new node containing int i to the list.
+ * Puts a new node containing i at the front (head) of the list.
  */
-void push(int i)
+void prepend(int i)
 {
     node* new_node = build_node(i);
 
@@ -64,28 +97,9 @@ void push(int i)
 }
 
 /**
- * Deletes the first node from the list, returning the int that it
- * contained. Note that the list *cannot* be empty!
- */
-int pop(void)
-{
-    // pull the first node out of the list
-    node* n = first;
-    first = first->next;
- 
-    // remember the value the node is holding
-    int i = n->i;
-
-    // free the node
-    free(n);
-
-    return i;
-}
-
-/**
  * Inserts a new node containing int i following node n.
  */
-void insert_after(node* n, int i)
+static void insert_after(node* n, int i)
 {
     if (n != NULL)
     {
@@ -96,10 +110,7 @@ void insert_after(node* n, int i)
 }
 
 /**
- * Attaches a new node containing int i to the end of the list.
- *
- * Note how this is a heck of a lot harder than just prepending,
- * and it takes O(n) time instead of O(1)!
+ * Puts a new node containing i at the end (tail) of the list.
  */
 void append(int i)
 {
@@ -115,7 +126,7 @@ void append(int i)
     // if prev is NULL, that means that the element belongs first
     if (prev == NULL)
     {
-        push(i);
+        prepend(i);
     }
     else
     {
@@ -125,8 +136,8 @@ void append(int i)
 }
 
 /**
- * Inserts a new node containing int i into the list in sorted (ascending)
- * order.
+ * Puts a new node containing i at the appropriate position in a list
+ * sorted in ascending order.
  */
 void insert_sorted(int i)
 {
@@ -149,7 +160,7 @@ void insert_sorted(int i)
     // if prev is NULL, that means that the element belongs first
     if (prev == NULL)
     {
-        push(i);
+        prepend(i);
     }
     else
     {
@@ -159,114 +170,39 @@ void insert_sorted(int i)
 }
 
 /**
- * Deletes the node following node n in the list.
- */
-void delete_after(node* n)
-{
-    if (n != NULL)
-    {
-        node* to_delete = n->next;
-        if (to_delete != NULL)
-        {
-            n->next = to_delete->next;
-        }
-        free(to_delete);
-    }
-}
-
-/**
- * Determines whether or not a node in the list contains int i.
- */
-bool contains(int i)
-{
-    for (node* n = first; n != NULL; n = n->next)
-    {
-        if (n->i == i)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-/**
- * Finds the position of the first node in the list, if any, that contains
- * int i. Returns -1 on failure.
- */
-bool position(int i)
-{
-    int position = 0;
-    for (node* n = first; n != NULL; n = n->next)
-    {
-        if (n->i == i)
-        {
-            return position;
-        }
-        position++;
-    }
-    return -1;
-}
-
-/**
- * Determines the length of the linked list.
- */
-int length(void)
-{
-    int length = 0;
-    for (node* n = first; n != NULL; n = n->next)
-    {
-        length++;
-    }
-    return length;
-}
-
-/**
- * Iterates through the list one node at a time, printing each node's int.
- */
-void print_list(void)
-{
-    printf("\nLIST IS NOW: ");
-    for (node* n = first; n != NULL; n = n->next)
-    {
-        printf("%d ", n->i);
-    }
-    printf("\n\n");
-}
-
-/**
  * Implements some simple test code for our singly-linked list.
  */
 int main(void)
 {
-    printf("Pushing ints 0-%d onto the list...", TEST_SIZE);
+    printf("Prepending ints 0-%d onto the list...", TEST_SIZE);
     for (int i = 0; i < TEST_SIZE; i++)
     {
-        push(i);
+        prepend(i);
     }
     printf("done!\n");
 
-    printf("Making sure that the list size is indeed %d...", TEST_SIZE);
+    printf("Making sure that the list length is indeed %d...", TEST_SIZE);
     assert(length() == TEST_SIZE);
     printf("good!\n");
 
-    int array[TEST_SIZE];
-    printf("Popping everything out of the list...");
+    printf("Making sure that values are arranged in descending order...");
+    node* n = first;
     for (int i = 0; i < TEST_SIZE; i++)
     {
-        array[i] = pop();
+        assert(n != NULL);
+        assert(n->i == TEST_SIZE - i - 1);
+        n = n->next;
+    }
+    printf("good!\n");
+
+    printf("Freeing the list...");
+    while (first != NULL)
+    {
+        node* next = first->next;
+        free(first);
+        first = next;
     }
     printf("done!\n");
-
-    printf("Making sure that the list is now empty...");
-    assert(length() == 0);
-    printf("good!\n");
-
-    printf("Making sure that values were returned in LIFO order...");
-    for (int i = 0; i < TEST_SIZE; i++)
-    {
-        assert(array[i] == TEST_SIZE - i - 1);
-    }
-    printf("good!\n");
 
     printf("Appending ints 0-%d to the list...", TEST_SIZE);
     for (int i = 0; i < TEST_SIZE; i++)
@@ -275,56 +211,60 @@ int main(void)
     }
     printf("done!\n");
 
-    printf("Making sure that the list size is indeed %d...", TEST_SIZE);
+    printf("Making sure that the list length is indeed %d...", TEST_SIZE);
     assert(length() == TEST_SIZE);
     printf("good!\n");
 
-    printf("Popping everything out of the list...");
+    printf("Making sure that values are arranged in ascending order...");
+    n = first;
     for (int i = 0; i < TEST_SIZE; i++)
     {
-        array[i] = pop();
+        assert(n != NULL);
+        assert(n->i == i);
+        n = n->next;
+    }
+    printf("good!\n");
+
+    printf("Freeing the list...");
+    while (first != NULL)
+    {
+        node* next = first->next;
+        free(first);
+        first = next;
     }
     printf("done!\n");
-
-    printf("Making sure that the list is now empty...");
-    assert(length() == 0);
-    printf("good!\n");
-
-    printf("Making sure that values were returned in FIFO order...");
-    for (int i = 0; i < TEST_SIZE; i++)
-    {
-        assert(array[i] == i);
-    }
-    printf("good!\n");
 
     printf("Inserting %d random ints to the list...", TEST_SIZE);
     for (int i = 0; i < TEST_SIZE; i++)
     {
-        insert_sorted(random() % TEST_SIZE);
+        insert_sorted(rand() % TEST_SIZE);
     }
     printf("done!\n");
 
-    printf("Making sure that the list size is indeed %d...", TEST_SIZE);
+    printf("Making sure that the list length is indeed %d...", TEST_SIZE);
     assert(length() == TEST_SIZE);
     printf("good!\n");
 
-    printf("Popping everything out of the list...");
+    printf("Making sure that values are arranged in sorted order...");
+    n = first;
+    int prev = 0;
     for (int i = 0; i < TEST_SIZE; i++)
     {
-        array[i] = pop();
+        assert(n != NULL);
+        assert(n->i >= prev);
+        prev = n->i;
+        n = n->next;
+    }
+    printf("good!\n");
+
+    printf("Freeing the list...");
+    while (first != NULL)
+    {
+        node* next = first->next;
+        free(first);
+        first = next;
     }
     printf("done!\n");
-
-    printf("Making sure that the list is now empty...");
-    assert(length() == 0);
-    printf("good!\n");
-
-    printf("Making sure that values were returned in sorted order...");
-    for (int i = 1; i < TEST_SIZE; i++)
-    {
-        assert(array[i] >= array[i - 1]);
-    }
-    printf("good!\n");
 
     printf("\n********\nSuccess!\n********\n");
 
