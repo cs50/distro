@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+// the capacity of the queue
 #define CAPACITY 10
 
 typedef struct
