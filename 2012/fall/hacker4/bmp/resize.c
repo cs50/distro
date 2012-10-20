@@ -22,18 +22,14 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // ensure resize factor is a float between 0.0 and 100.0
-    for (int i = 0, len = strlen(argv[1]); i < len; i++)
+    // parse the float arg, just as GetFloat does in cs50.h
+    float factor;
+    char c;
+    if (sscanf(argv[1], "%f %c", &factor, &c) != 1)
     {
-        if (!isdigit(argv[1][i]) && argv[1][i] != '.')
-        {
-            printf("the second argument must be an integer.\n");
-            return 1;
-        }
+        printf("n, the resize factor, must be a float\n");
+        return 1;
     }
-
-    // initialize resize factor
-    float factor = atof(argv[1]);
 
     // remember filenames
     char* infile = argv[2];
@@ -58,7 +54,8 @@ int main(int argc, char* argv[])
     FILE* outptr = fopen(outfile, "w");
     if (outptr == NULL)
     {
-        fprintf(stderr, "Could not create %s.\n", outfile);
+        fclose(inptr);
+        printf("Could not create %s.\n", outfile);
         return 1;
     }
 
@@ -74,7 +71,7 @@ int main(int argc, char* argv[])
     if (bf.bfType != 0x4d42 || bf.bfOffBits != 54 || bi.biSize != 40 || 
         bi.biBitCount != 24 || bi.biCompression != 0)
     {
-        fprintf(stderr, "Unsupported file format.\n");
+        printf("Unsupported file format.\n");
         return 1;
     }
 
@@ -95,7 +92,8 @@ int main(int argc, char* argv[])
     bi.biSizeImage = ((3 * bi.biWidth) + padding) * abs(bi.biHeight);
 
     // update BITMAPFILEHEADER with new bitmap file size
-    bf.bfSize = bi.biSizeImage + 54;
+    bf.bfSize = bi.biSizeImage + sizeof(BITMAPFILEHEADER)
+                + sizeof(BITMAPINFOHEADER);
 
     // write outfile's BITMAPFILEHEADER and BITMAPINFOHEADER
     fwrite(&bf, sizeof(BITMAPFILEHEADER), 1, outptr);
@@ -103,9 +101,7 @@ int main(int argc, char* argv[])
 
     // currRow stores one of the rows in the input picture.
     // rowNum states which row is being stored.
-    RGBTRIPLE* currRow = malloc(oldWidth * sizeof(RGBTRIPLE));
-    if (currRow == NULL)
-        return 1;
+    RGBTRIPLE currRow[oldWidth];
     int rowNum = -1;
 
     // iterate over every pixel in outfile, and find and write
@@ -125,9 +121,7 @@ int main(int argc, char* argv[])
             rowNum++;
             for (int j = 0; j < oldWidth; j++)
             {
-                RGBTRIPLE triple;
-                fread(&triple, sizeof(RGBTRIPLE), 1, inptr);
-                currRow[j] = triple;
+                fread(&currRow[j], sizeof(RGBTRIPLE), 1, inptr);
             }
 
             // skip over padding, if any
@@ -143,10 +137,10 @@ int main(int argc, char* argv[])
 
         // write padding for scanline to outfile
         for (int l = 0; l < padding; l++)
+        {
             fputc(0x00, outptr);
+        }
     }
-
-    free(currRow);
     
     // close infile
     fclose(inptr);
