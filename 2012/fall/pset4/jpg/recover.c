@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
     FILE* raw_file = fopen(RAW_FILENAME, "r");
     if (raw_file == NULL)
     {
-		printf("recover: %s: No such file\n", RAW_FILENAME);
+		printf("recover: %s: Error opening file\n", RAW_FILENAME);
 		return 1;
     }
 

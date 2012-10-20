@@ -14,12 +14,12 @@
 
 #include "bmp.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // ensure proper usage
     if (argc != 4)
     {
-        fprintf(stderr, "Usage: resize n infile outfile\n");
+        printf("Usage: resize n infile outfile\n");
         return 1;
     }
 
@@ -28,8 +28,8 @@ int main(int argc, char *argv[])
     {
         if (!isdigit(argv[1][i]))
         {
-            fprintf(stderr, "n, the resize factor, must be an integer.\n");
-            return 5;
+            printf("n, the resize factor, must be an integer.\n");
+            return 1;
         }
     }
 
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     // range check: n must be on (0, 100]
     if (n <= 0 || n > 100)
     {
-        fprintf(stderr, "n, the resize factor, must satisfy 0 < n <= 100.\n");
+        printf("n, the resize factor, must satisfy 0 < n <= 100.\n");
         return 1;
     }
 
@@ -51,15 +51,16 @@ int main(int argc, char *argv[])
     FILE* inptr = fopen(infile, "r");
     if (inptr == NULL)
     {
-        fprintf(stderr, "Could not open %s.\n", infile);
+        printf("Could not open %s.\n", infile);
         return 1;
     }
 
     // open output file
-    FILE *outptr = fopen(outfile, "w");
+    FILE* outptr = fopen(outfile, "w");
     if (outptr == NULL)
     {
-        fprintf(stderr, "Could not create %s.\n", outfile);
+        fclose(inptr);
+        printf("Could not create %s.\n", outfile);
         return 1;
     }
 
@@ -75,7 +76,9 @@ int main(int argc, char *argv[])
     if (bf.bfType != 0x4d42 || bf.bfOffBits != 54 || bi.biSize != 40 || 
         bi.biBitCount != 24 || bi.biCompression != 0)
     {
-        fprintf(stderr, "Unsupported file format.\n");
+        fclose(inptr);
+        fclose(outptr);
+        printf("Unsupported file format.\n");
         return 1;
     }
 
@@ -97,7 +100,8 @@ int main(int argc, char *argv[])
     bi.biSizeImage = ((3 * bi.biWidth) + padding) * abs(bi.biHeight);
 
     // update BITMAPFILEHEADER with new bitmap file size
-    bf.bfSize = bi.biSizeImage + 54;
+    bf.bfSize = bi.biSizeImage + sizeof(BITMAPFILEHEADER)
+                + sizeof(BITMAPINFOHEADER);
 
     // write outfile's BITMAPFILEHEADER
     fwrite(&bf, sizeof(BITMAPFILEHEADER), 1, outptr);
@@ -109,48 +113,36 @@ int main(int argc, char *argv[])
     for (int i = 0; i < oldHeight; i++)
     {
         // array stores in memory all pixels in scanline
-        RGBTRIPLE *currRow = malloc(oldWidth * sizeof(RGBTRIPLE));
-
-        // check if memory was properly allocated
-        if (currRow == NULL)
-            return 1;
+        RGBTRIPLE currRow[oldWidth];
 
         // iterate over pixels in scanline
         for (int j = 0; j < oldWidth; j++)
         {
-            // temporary storage
-            RGBTRIPLE triple;
-
             // read RGB triple from infile
-            fread(&triple, sizeof(RGBTRIPLE), 1, inptr);
-
-            // store pixel in memory
-            currRow[j] = triple;
+            fread(&currRow[j], sizeof(RGBTRIPLE), 1, inptr);
         }
 
         // write new RGB triples to outfile for next n scanlines
         for (int k = 0; k < n; k ++)
         {
             for (int l = 0; l < oldWidth; l++)
-            {
-                // retrieve triple from old file
-                RGBTRIPLE triple = currRow[l];
-                
+            {   
                 // apply old triple to next n pixels on scanline
                 for (int m = 0; m < n; m++)
-                    fwrite(&triple, sizeof(RGBTRIPLE), 1, outptr);
+                {
+                    fwrite(&currRow[l], sizeof(RGBTRIPLE), 1, outptr);
+                }
             }
 
             // write padding for scanline to outfile
             for (int l = 0; l < padding; l++)
-                 fputc(0x00, outptr);
+            {
+                fputc(0x00, outptr);
+            }
         }
 
         // skip over padding, if any
         fseek(inptr, oldPadding, SEEK_CUR);
-
-        // free pointer
-        free(currRow);
     }
  
     // close infile

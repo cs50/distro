@@ -1,8 +1,11 @@
 /****************************************************************************
  * whodunit.c
  *
- * Computer Science 50
- * Problem Set 5
+ * David J. Malan
+ * malan@harvard.edu
+ *
+ * Solves the whodunit problem by applying a filter to a BMP that only lets
+ * the red through.
  ***************************************************************************/
        
 #include <cs50.h>
@@ -11,7 +14,7 @@
 
 #include "bmp.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // ensure proper usage
     if (argc != 3)
@@ -21,23 +24,24 @@ int main(int argc, char *argv[])
     }
 
     // remember filenames
-    char *infile = argv[1];
-    char *outfile = argv[2];
+    char* infile = argv[1];
+    char* outfile = argv[2];
 
     // open input file 
-    FILE *inptr = fopen(infile, "r");
+    FILE* inptr = fopen(infile, "r");
     if (inptr == NULL)
     {
-        printf("Could not open %s.\n", infile);
-        return 2;
+        printf("whodunit: %s: Error opening file\n", infile);
+        return 1;
     }
 
     // open output file
-    FILE *outptr = fopen(outfile, "w");
+    FILE* outptr = fopen(outfile, "w");
     if (outptr == NULL)
     {
-        fprintf(stderr, "Could not create %s.\n", outfile);
-        return 3;
+        fclose(inptr);
+        printf("whodunit: %s: Error creating file\n", outfile);
+        return 1;
     }
 
     // read infile's BITMAPFILEHEADER
@@ -52,8 +56,10 @@ int main(int argc, char *argv[])
     if (bf.bfType != 0x4d42 || bf.bfOffBits != 54 || bi.biSize != 40 || 
         bi.biBitCount != 24 || bi.biCompression != 0)
     {
-        fprintf(stderr, "Unsupported file format.\n");
-        return 4;
+        fclose(inptr);
+        fclose(outptr);
+        printf("whodunit: %s: Unsupported file format\n", infile);
+        return 1;
     }
 
     // write outfile's BITMAPFILEHEADER
