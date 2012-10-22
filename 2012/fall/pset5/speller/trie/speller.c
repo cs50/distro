@@ -2,7 +2,7 @@
  * speller.c
  *
  * Computer Science 50
- * Problem Set 6
+ * Problem Set 5
  *
  * Implements a spell-checker.
  ***************************************************************************/
@@ -14,16 +14,13 @@
 
 #include "dictionary.h"
 
-
 // default dictionary
 #define DICTIONARY "/home/cs50/pset5/dictionaries/large"
 
 // prototype
-double calculate(const struct rusage *b, const struct rusage *a);
+double calculate(const struct rusage* b, const struct rusage* a);
 
-
-int
-main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     // check for correct number of args
     if (argc != 2 && argc != 3)
@@ -39,7 +36,7 @@ main(int argc, char *argv[])
     double ti_load = 0.0, ti_check = 0.0, ti_size = 0.0, ti_unload = 0.0;
 
     // determine dictionary to use
-    char *dictionary = (argc == 3) ? argv[1] : DICTIONARY;
+    char* dictionary = (argc == 3) ? argv[1] : DICTIONARY;
 
     // load dictionary
     getrusage(RUSAGE_SELF, &before);
@@ -50,20 +47,20 @@ main(int argc, char *argv[])
     if (!loaded)
     {
         printf("Could not load %s.\n", dictionary);
-        return 2;
+        return 1;
     }
 
     // calculate time to load dictionary
     ti_load = calculate(&before, &after);
 
     // try to open text
-    char *text = (argc == 3) ? argv[2] : argv[1];
-    FILE *fp = fopen(text, "r");
+    char* text = (argc == 3) ? argv[2] : argv[1];
+    FILE* fp = fopen(text, "r");
     if (fp == NULL)
     {
         printf("Could not open %s.\n", text);
         unload();
-        return 3;
+        return 1;
     }
 
     // prepare to report misspellings
@@ -139,7 +136,7 @@ main(int argc, char *argv[])
         fclose(fp);
         printf("Error reading %s.\n", text);
         unload();
-        return 4;
+        return 1;
     }
 
     // close text
@@ -162,7 +159,7 @@ main(int argc, char *argv[])
     if (!unloaded)
     {
         printf("Could not unload %s.\n", dictionary);
-        return 5;
+        return 1;
     }
 
     // calculate time to unload dictionary
@@ -183,20 +180,21 @@ main(int argc, char *argv[])
     return 0;
 }
 
-
-/*
+/**
  * Returns number of seconds between b and a.
  */
-
-double
-calculate(const struct rusage *b, const struct rusage *a)
+double calculate(const struct rusage* b, const struct rusage* a)
 {
     if (b == NULL || a == NULL)
-        return 0;
+    {
+        return 0.0;
+    }
     else
+    {
         return ((((a->ru_utime.tv_sec * 1000000 + a->ru_utime.tv_usec) -
                  (b->ru_utime.tv_sec * 1000000 + b->ru_utime.tv_usec)) +
                 ((a->ru_stime.tv_sec * 1000000 + a->ru_stime.tv_usec) -
                  (b->ru_stime.tv_sec * 1000000 + b->ru_stime.tv_usec)))
                 / 1000000.0);
+    }
 }
