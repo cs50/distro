@@ -7,10 +7,16 @@
  * dictionary.
  ***************************************************************************/
 
+// for strdup
+#define _XOPEN_SOURCE 500
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
+
+// for strcasecmp
+#include <strings.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
