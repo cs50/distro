@@ -129,6 +129,7 @@ bool load(const char* dictionary)
         // if we fail, we're either at the end of the file or we erred
         if (fscanf(dictionary_file, "%45s", entry->word) != 1)
         {
+            free(entry);
             break;
         }
 
