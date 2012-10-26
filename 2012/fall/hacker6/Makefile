@@ -17,10 +17,10 @@ DUMP = dump
 DUMP_SRCS = dump.c forest.c huffile.c tree.c
 DUMP_OBJS = $(DUMP_SRCS:.c=.o)
 
-# puff
-PUFF      = puff
-PUFF_SRCS = forest.c huffile.c puff.c tree.c
-PUFF_OBJS = $(PUFF_SRCS:.c=.o)
+# huff
+HUFF      = huff
+HUFF_SRCS = forest.c huff.c huffile.c tree.c
+HUFF_OBJS = $(HUFF_SRCS:.c=.o)
 
 # space-separated list of header files
 HDRS = forest.h huffile.h tree.h
@@ -32,9 +32,9 @@ LIBS = -lm
 # targets
 $(DUMP): $(DUMP_OBJS) $(HDRS)
 	$(CC) $(CFLAGS) -o $@ $(DUMP_OBJS) $(LIBS)
-$(PUFF): $(PUFF_OBJS) $(HEADERS)
-	$(CC) $(CFLAGS) -o $@ $(PUFF_OBJS) $(LDLIBS)
+$(HUFF): $(HUFF_OBJS) $(HEADERS)
+	$(CC) $(CFLAGS) -o $@ $(HUFF_OBJS) $(LDLIBS)
 
 # housekeeping
 clean:
-	rm -f core $(DUMP) $(PUFF) *.o
+	rm -f core $(DUMP) $(HUFF) *.o
