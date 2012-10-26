@@ -46,9 +46,47 @@ bool contains(int value)
 }
 
 /**
+ * Recursive implementation of contains, for fun!
+ */
+bool contains_recursive(node* tree, int value)
+{
+    if (tree == NULL)
+    {
+        return false;
+    }
+    
+    if (tree->value == value)
+    {
+        return true;
+    }
+
+    return (contains_recursive(tree->left_child, value) ||
+            contains_recursive(tree->right_child, value));
+}
+
+/**
+ * Helper function to build a node (and clean the insert code up a bit!).
+ */
+static node* build_node(int value)
+{
+    node* new_node = malloc(sizeof(node));
+    if (new_node != NULL)
+    {
+        new_node->value = value;
+        new_node->left_child = NULL;
+        new_node->right_child = NULL;
+    }
+    return new_node;
+}
+
+/**
  * Inserts a new node containing value into the tree. Returns true if the
  * insert succeeded and false otherwise (e.g., insufficient heap memory,
  * value already in the tree).
+ *
+ * In general, it's often cleaner to do this recursively, but that requires
+ * either (a) passing in a node** or (b) returning a node*. For simplicity,
+ * we pass on (a). We pass on (b) so that we can return a bool instead.
  */
 bool insert(int value)
 {
@@ -72,15 +110,14 @@ bool insert(int value)
         }
     }
 
-    // build a new node
-    node* new_node = malloc(sizeof(node));
+    // build a new node 
+    node* new_node = build_node(value);
     if (new_node == NULL)
     {
         return false;
     }
-    new_node->value = value;
 
-    // put it into the tree
+    // put the new node into the tree!
     if (parent->value > new_node->value)
     {
         parent->left_child = new_node;
@@ -89,8 +126,21 @@ bool insert(int value)
     {
         parent->right_child = new_node;
     }
-
     return true;
+}
+
+/**
+ * Helper function to free a tree. Not needed for students'
+ * implementations but here for completion (and interest!).
+ */
+static void free_tree(node* tree)
+{
+    if (tree != NULL)
+    {
+        free_tree(tree->left_child);
+        free_tree(tree->right_child);
+        free(tree);
+    }
 }
 
 int main(int argc, const char* argv[])
@@ -134,7 +184,8 @@ int main(int argc, const char* argv[])
         printf("Tree contains %d? %s\n", i, contains(i)? "true" : "false");
     }
 
-    // ignore freeing memory for now
+    free_tree(root);
+    root = NULL;
 
     return 0;
 }
