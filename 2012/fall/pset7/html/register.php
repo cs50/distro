@@ -35,7 +35,7 @@
         {
             apologize("Can't find your ID.");
         }
-        $id = $results[0]["id"];
+        $id = $rows[0]["id"];
 
         // log user in
         $_SESSION["id"] = $id;
