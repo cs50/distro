@@ -62,12 +62,12 @@ dictionary;
 
 // prototypes
 void clear(void);
-bool crawl(string word, int x, int y);
+bool crawl(string letters, int x, int y);
 void draw(void);
-bool find(string word);
+bool find(string s);
 void initialize(void);
-bool load(string filename);
-bool lookup(string word);
+bool load(string s);
+bool lookup(string s);
 void scramble(void);
 
 // This is Scramble.
@@ -116,7 +116,7 @@ int main(int argc, string argv[])
     int end = time(NULL) + DURATION;
 
     // open log
-    log = fopen("./log.txt", "a");
+    log = fopen("./log.txt", "w");
     if (log == NULL)
     {
         printf("Could not open log.\n");
@@ -162,25 +162,27 @@ int main(int argc, string argv[])
         // prompt for word
         printf("> ");
         string word = GetString();
-        if (word != NULL)
+
+        // quit playing if user hits ctrl-d
+        if (word == NULL)
+            break;
+
+        // capitalize word
+        for (int i = 0, n = strlen(word); i < n; i++) 
+            word[i] = toupper(word[i]);
+
+        // log word
+        fprintf(log, "%s\n", word);
+
+        // check whether to scramble grid
+        if (strcmp(word, "SCRAMBLE") == 0)
+            scramble();
+
+        // or to look for word on grid and in dictionary
+        else
         {
-            // capitalize word
-            for (int i = 0, n = strlen(word); i < n; i++) 
-                word[i] = toupper(word[i]);
-
-            // log word
-            fprintf(log, "%s\n", word);
-
-            // check whether to scramble grid
-            if (strcmp(word, "SCRAMBLE") == 0)
-                scramble();
-
-            // or to look for word on grid and in dictionary
-            else
-            {
-                if (find(word) == true && lookup(word) == true)
-                    score += strlen(word);
-            }
+            if (find(word) == true && lookup(word) == true)
+                score += strlen(word);
         }
     }
 
@@ -264,12 +266,12 @@ void draw(void)
 }
 
 /**
- * Returns true iff word is found in grid.
+ * Returns true iff word, s, is found in grid.
  */
-bool find(string word)
+bool find(string s)
 {
     // word must be at least 2 characters in length
-    if (strlen(word) < 2)
+    if (strlen(s) < 2)
         return false;
 
     // search grid for word
@@ -283,7 +285,7 @@ bool find(string word)
                     marks[i][j] = false;
 
             // search for word starting at grid[i][j]
-            if (crawl(word, row, col) == true)
+            if (crawl(s, row, col) == true)
                 return true;
         }
     }
@@ -349,12 +351,12 @@ void initialize(void)
 }
 
 /**
- * Loads words from dictionary with given filename into a global array.
+ * Loads words from dictionary with given filename, s, into a global array.
  */
-bool load(string filename)
+bool load(string s)
 {
     // open dictionary
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(s, "r");
     if (file == NULL)
         return false;
 
@@ -387,10 +389,10 @@ bool load(string filename)
 }
 
 /**
- * Looks up word in dictionary.  Iff found (for the first time), flags word
+ * Looks up word, s, in dictionary.  Iff found (for the first time), flags word
  * as found (so that user can't score with it again) and returns true.
  */
-bool lookup(string word)
+bool lookup(string s)
 {
     int low = 0;
     int high = dictionary.size - 1;
@@ -402,7 +404,7 @@ bool lookup(string word)
 
         // see man page for strcmp for details on its return values!
         // make sure to test for >/< 0, not ==/!= 1
-        int comparison = strcmp(word, dictionary.words[mid].letters);
+        int comparison = strcmp(s, dictionary.words[mid].letters);
         if (comparison == 0)
         {
             // check if already found
