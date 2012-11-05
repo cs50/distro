@@ -61,17 +61,17 @@ struct
 dictionary;
 
 // prototypes
-int calculate_score(string word);
+int calculate_score(string s);
 void clear(void);
-bool crawl(string word, int x, int y);
+bool crawl(string letters, int x, int y);
 bool discover(string word, int desired_length, int x, int y);
 void draw(void);
-bool find(string word);
+bool find(string s);
 void initialize(void);
 void inspire(void);
-bool load(string filename);
-bool lookup(string word);
-bool lookup_no_flag(string word);
+bool load(string s);
+bool lookup(string s);
+bool lookup_no_flag(string s);
 
 // This is Scramble.
 int main(int argc, string argv[])
@@ -119,14 +119,14 @@ int main(int argc, string argv[])
     int end = time(NULL) + DURATION;
 
     // open log
-    log = fopen("./log.txt", "a");
+    log = fopen("./log.txt", "w");
     if (log == NULL)
     {
         printf("Could not open log.\n");
         return 1;
     }
 
-    //
+    // flag indicating whether to inspire
     bool inspired = false;
  
     // accept words until timer expires
@@ -174,26 +174,28 @@ int main(int argc, string argv[])
 
         // prompt for word
         printf("> ");
-        string word = GetString();
-        if (word != NULL)
+        string s = GetString();
+
+        // quit playing if user hits ctrl-d
+        if (s == NULL)
+            break;
+
+        // capitalize word
+        for (int i = 0, n = strlen(s); i < n; i++) 
+            s[i] = toupper(s[i]);
+
+        // log word
+        fprintf(log, "%s\n", s);
+
+        // check whether to inspire user
+        if (strcmp(s, "INSPIRATION") == 0)
+            inspired = true;
+
+        // or to look for word on grid and in dictionary
+        else
         {
-            // capitalize word
-            for (int i = 0, n = strlen(word); i < n; i++) 
-                word[i] = toupper(word[i]);
-
-            // log word
-            fprintf(log, "%s\n", word);
-
-            // check whether to inspire user
-            if (strcmp(word, "INSPIRATION") == 0)
-                inspired = true;
-
-            // or to look for word on grid and in dictionary
-            else
-            {
-                if (find(word) == true && lookup(word) == true)
-                    score += calculate_score(word);
-            }
+            if (find(s) && lookup(s))
+                score += calculate_score(s);
         }
     }
 
@@ -207,7 +209,7 @@ int main(int argc, string argv[])
  * Calculates the appropriate score for a word using the static points array
  * provided in the specification.
  */
-int calculate_score(string word)
+int calculate_score(string s)
 {
     int points[] = {
         1,  // a
@@ -239,8 +241,8 @@ int calculate_score(string word)
     };
 
     int score = 0;
-    for (int i = 0; i < strlen(word); i++)
-        score += points[word[i] - 'A'];
+    for (int i = 0; i < strlen(s); i++)
+        score += points[s[i] - 'A'];
     return score;
 }
 
@@ -270,7 +272,7 @@ bool crawl(string letters, int x, int y)
         return false;
 
     // been here before!
-    if (marks[x][y] == true)
+    if (marks[x][y])
         return false;
 
     // check grid[x][y] for current letter
@@ -287,7 +289,7 @@ bool crawl(string letters, int x, int y)
         for (int j = -1; j <= 1; j++)
         {
             // check grid[x + i][y + j] for next letter
-            if (crawl(&letters[1], x + i, y + j) == true)
+            if (crawl(&letters[1], x + i, y + j))
                 return true;
         }
     }
@@ -303,12 +305,12 @@ bool crawl(string letters, int x, int y)
  * Crawls the grid attempting to find a word of the desired length that is both
  * in the dictionary and has not yet been found by the player.
  */
-bool discover(string word, int desired_length, int x, int y)
+bool discover(string s, int desired_length, int x, int y)
 {
     // if our word is of the desired length, check if it's in the dictionary
-    int length = strlen(word);
+    int length = strlen(s);
     if (length == desired_length)
-        return lookup_no_flag(word);
+        return lookup_no_flag(s);
 
     // don't fall off the grid!
     if (x < 0 || x >= DIMENSION)
@@ -317,12 +319,12 @@ bool discover(string word, int desired_length, int x, int y)
         return false;
 
     // been here before!
-    if (marks[x][y] == true)
+    if (marks[x][y])
         return false;
 
     // add current letter to word
-    word[length] = grid[x][y];
-    word[length + 1] = '\0';
+    s[length] = grid[x][y];
+    s[length + 1] = '\0';
 
     // mark location
     marks[x][y] = true;
@@ -334,13 +336,13 @@ bool discover(string word, int desired_length, int x, int y)
         for (int j = -1; j <= 1; j++)
         {
             // check grid[x + i][y + j] for next letter
-            if (discover(word, desired_length, x + i, y + j))
+            if (discover(s, desired_length, x + i, y + j))
                 return true;
         }
     }
 
     // chop current letter off of word to backtrack
-    word[length] = '\0';
+    s[length] = '\0';
 
     // unmark location
     marks[x][y] = false;
@@ -368,12 +370,12 @@ void draw(void)
 }
 
 /**
- * Returns true iff word is found in grid.
+ * Returns true iff word, s, is found in grid.
  */
-bool find(string word)
+bool find(string s)
 {
     // word must be at least 2 characters in length
-    if (strlen(word) < 2)
+    if (strlen(s) < 2)
         return false;
 
     // search grid for word
@@ -387,7 +389,7 @@ bool find(string word)
                     marks[i][j] = false;
 
             // search for word starting at grid[i][j]
-            if (crawl(word, row, col) == true)
+            if (crawl(s, row, col))
                 return true;
         }
     }
@@ -498,12 +500,12 @@ void inspire(void)
 }
 
 /**
- * Loads words from dictionary with given filename into a global array.
+ * Loads words from dictionary with given filename, s, into a global array.
  */
-bool load(string filename)
+bool load(string s)
 {
     // open dictionary
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(s, "r");
     if (file == NULL)
         return false;
 
@@ -536,10 +538,10 @@ bool load(string filename)
 }
 
 /**
- * Looks up word in dictionary.  Iff found (for the first time), flags word
+ * Looks up word, s, in dictionary.  Iff found (for the first time), flags word
  * as found (so that user can't score with it again) and returns true.
  */
-bool lookup(string word)
+bool lookup(string s)
 {
     int low = 0;
     int high = dictionary.size - 1;
@@ -551,7 +553,7 @@ bool lookup(string word)
 
         // see man page for strcmp for details on its return values!
         // make sure to test for >/< 0, not ==/!= 1
-        int comparison = strcmp(word, dictionary.words[mid].letters);
+        int comparison = strcmp(s, dictionary.words[mid].letters);
         if (comparison == 0)
         {
             // check if already found
@@ -575,11 +577,11 @@ bool lookup(string word)
 }
 
 /**
- * Looks up word in dictionary. Returns true iff the word has not been found,
+ * Looks up word, s, in dictionary. Returns true iff the word has not been found,
  * but does *not* flag the word. Needed for discover to work properly, since we
  * don't want to flag words with which we're about to inspire the player!
  */
-bool lookup_no_flag(string word)
+bool lookup_no_flag(string s)
 {
     int low = 0;
     int high = dictionary.size - 1;
@@ -591,7 +593,7 @@ bool lookup_no_flag(string word)
 
         // see man page for strcmp for details on its return values!
         // make sure to test for >/< 0, not ==/!= 1
-        int comparison = strcmp(word, dictionary.words[mid].letters);
+        int comparison = strcmp(s, dictionary.words[mid].letters);
         if (comparison == 0)
             return !dictionary.words[mid].found;
         else if (comparison > 0)

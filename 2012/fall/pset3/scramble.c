@@ -161,28 +161,28 @@ int main(int argc, string argv[])
         
         // prompt for word
         printf("> ");
-        string word = GetString();
+        string s = GetString();
 
         // quit playing if user hits ctrl-d
-        if (word == NULL)
+        if (s == NULL)
             break;
 
         // capitalize word
-        for (int i = 0, n = strlen(word); i < n; i++) 
-            word[i] = toupper(word[i]);
+        for (int i = 0, n = strlen(s); i < n; i++) 
+            s[i] = toupper(s[i]);
 
         // log word
-        fprintf(log, "%s\n", word);
+        fprintf(log, "%s\n", s);
 
         // check whether to scramble grid
-        if (strcmp(word, "SCRAMBLE") == 0)
+        if (strcmp(s, "SCRAMBLE") == 0)
             scramble();
 
         // or to look for word on grid and in dictionary
         else
         {
-            if (find(word) == true && lookup(word) == true)
-                score += strlen(word);
+            if (find(s) && lookup(s))
+                score += strlen(s);
         }
     }
 
@@ -218,7 +218,7 @@ bool crawl(string letters, int x, int y)
         return false;
 
     // been here before!
-    if (marks[x][y] == true)
+    if (marks[x][y])
         return false;
 
     // check grid[x][y] for current letter
@@ -235,7 +235,7 @@ bool crawl(string letters, int x, int y)
         for (int j = -1; j <= 1; j++)
         {
             // check grid[x + i][y + j] for next letter
-            if (crawl(&letters[1], x + i, y + j) == true)
+            if (crawl(&letters[1], x + i, y + j))
                 return true;
         }
     }
@@ -285,7 +285,7 @@ bool find(string s)
                     marks[i][j] = false;
 
             // search for word starting at grid[i][j]
-            if (crawl(s, row, col) == true)
+            if (crawl(s, row, col))
                 return true;
         }
     }
