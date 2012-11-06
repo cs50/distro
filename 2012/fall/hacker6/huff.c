@@ -62,6 +62,7 @@ int main(int argc, char * argv[])
     // ensure file is non-empty
     if (header.checksum == 0)
     {   
+        fclose(input);
         printf("Input file is empty.\n");
         return 1;
     }   
@@ -73,6 +74,7 @@ int main(int argc, char * argv[])
     Forest* forest = mkforest();
     if (forest == NULL)
     {
+        fclose(input);
         printf("Could not make forest.\n");
         return 1;
     }
@@ -91,6 +93,7 @@ int main(int argc, char * argv[])
         if (tree == NULL)
         {
             rmforest(forest);
+            fclose(input);
             printf("Could not make tree.\n");
             return 1;
         }
@@ -103,6 +106,7 @@ int main(int argc, char * argv[])
         if (plant(forest, tree) == false)
         {
             rmforest(forest);
+            fclose(input);
             printf("Could not plant tree.\n");
             return 1;
         }
@@ -117,6 +121,7 @@ int main(int argc, char * argv[])
         if (tree == NULL)
         {
             rmforest(forest);
+            fclose(input);
             printf("Could not pick any trees.\n");
             return 1;
         }
@@ -134,6 +139,7 @@ int main(int argc, char * argv[])
         Tree* parent = mktree();
         if (parent == NULL)
         {
+            fclose(input);
             rmforest(forest);
             printf("Could not make parent.\n");
             return 1;
@@ -147,6 +153,7 @@ int main(int argc, char * argv[])
         // add parent to forest
         if (plant(forest, parent) == false)
         {
+            fclose(input);
             rmforest(forest);
             printf("Could not plant parent.\n");
             return 1;
@@ -184,6 +191,7 @@ int main(int argc, char * argv[])
     Huffile* output = hfopen(argv[2], "w");
     if (output == NULL)
     {
+        fclose(input);
         printf("Could not open %s for writing.\n", argv[2]);
         return 1;
     }
@@ -191,6 +199,7 @@ int main(int argc, char * argv[])
     // write header out to file
     if (hwrite(&header, output) == false)
     {
+        fclose(input);
         printf("Could not write header.\n");
         return 1;
     }
@@ -202,6 +211,7 @@ int main(int argc, char * argv[])
         {
             if (bwrite(codes[c][i], output) == false)
             {
+                fclose(input);
                 printf("Could not write bit.\n");
                 return 1;
             }

@@ -41,6 +41,7 @@ int main(int argc, char* argv[])
     Huffeader header;
     if (hread(&header, input) == false)
     {
+        hfclose(input);
         printf("Could not read header.\n");
         return 1;
     }
@@ -48,6 +49,7 @@ int main(int argc, char* argv[])
     // check for magic number
     if (header.magic != MAGIC)
     {
+        hfclose(input);
         printf("File was not huffed.\n");
         return 1;
     }
@@ -60,6 +62,7 @@ int main(int argc, char* argv[])
     }
     if (checksum != 0)
     {
+        hfclose(input);
         printf("File was not huffed.\n");
         return 1;
     }
@@ -68,6 +71,7 @@ int main(int argc, char* argv[])
     Forest* forest = mkforest();
     if (forest == NULL)
     {
+        hfclose(input);
         printf("Could not make forest.\n");
         return 1;
     }
@@ -85,6 +89,7 @@ int main(int argc, char* argv[])
         Tree* tree = mktree();
         if (tree == NULL)
         {
+            hfclose(input);
             rmforest(forest);
             printf("Could not make tree.\n");
             return 1;
@@ -97,6 +102,7 @@ int main(int argc, char* argv[])
         // plant tree in forest
         if (plant(forest, tree) == false)
         {
+            hfclose(input);
             rmtree(tree);
             rmforest(forest);
             printf("Could not plant tree.\n");
@@ -112,6 +118,7 @@ int main(int argc, char* argv[])
         tree = pick(forest);
         if (tree == NULL)
         {
+            hfclose(input);
             rmforest(forest);
             printf("Could not pick any trees.\n");
             return 1;
@@ -130,6 +137,7 @@ int main(int argc, char* argv[])
         Tree* parent = mktree();
         if (parent == NULL)
         {
+            hfclose(input);
             rmtree(tree);
             rmtree(sibling);
             rmforest(forest);
@@ -145,6 +153,7 @@ int main(int argc, char* argv[])
         // add parent to forest
         if (plant(forest, parent) == false)
         {
+            hfclose(input);
             rmtree(parent);
             rmforest(forest);
             printf("Could not plant parent.\n");
@@ -159,6 +168,7 @@ int main(int argc, char* argv[])
     FILE* output = fopen(argv[2], "w");
     if (output == NULL)
     {
+        hfclose(input);
         rmtree(tree);
         printf("Could not open %s for writing.\n", argv[2]);
         return 1;
@@ -197,24 +207,3 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-
-void mkcodes(bit codes[][SYMBOLS+1], Tree* tree, bit code[], int ith)
-{
-    // record code if at leaf
-    if (tree->left == NULL && tree->right == NULL)
-    {
-        for (int i = 0; i < ith; i++)
-        {
-            codes[(int) tree->symbol][i] = code[i];
-        }
-        return;
-    }
-
-    // encode left subtree
-    code[ith] = ZERO;
-    mkcodes(codes, tree->left, code, ith+1);
-
-    // encode right subtree
-    code[ith] = ONE;
-    mkcodes(codes, tree->right, code, ith+1);
-}
