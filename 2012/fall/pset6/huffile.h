@@ -10,6 +10,7 @@
 #ifndef HUFFILE_H
 #define HUFFILE_H
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
