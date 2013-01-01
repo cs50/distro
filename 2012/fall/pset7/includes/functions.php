@@ -70,7 +70,9 @@
         $handle = @fopen("http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s=$symbol", "r");
         if ($handle === false)
         {
-            return false;
+            // trigger (big, orange) error
+            trigger_error("Could not connect to Yahoo!", E_USER_ERROR);
+            exit;
         }
 
         // download first line of CSV file
@@ -148,7 +150,9 @@
         }
         else
         {
-            return false;
+            // trigger (big, orange) error
+            trigger_error($statement->errorInfo()[2], E_USER_ERROR);
+            exit;
         }
     }
 
