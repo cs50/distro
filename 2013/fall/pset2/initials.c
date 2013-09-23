@@ -5,6 +5,9 @@
  * malan@harvard.edu
  *
  * Prints user's initials based on user's name.
+ *
+ * Assumes that user's input will contain only letters (uppercase
+ * and/or lowercase) plus single spaces between words.
  */
 
 #include <cs50.h>
@@ -20,31 +23,23 @@ int main(void)
     // ensure GetString didn't return NULL
     if (s != NULL)
     {
-        // let's plan to capitalize the first letter   
-        bool capitalize = true;
+        // let's plan to output the first letter as an initial
+        bool output = true;
 
         // iterate over characters in user's name
         for (int i = 0, n = strlen(s); i < n; i++)
         {
-            // if i'th character is alphabetical
-            // and we should capitalize, capitalize
-            if (isalpha(s[i]) && capitalize)
+            // if it's time to output an initial, capitalize and output it
+            if (output == true)
             {
                 printf("%c", toupper(s[i]));
-                capitalize = false;
+                output = false;
             }
 
-            // else print i'th character as is
-            else
+            // if we've encountered a space, output the next letter as an initial
+            if (s[i] == ' ')
             {
-                printf("%c", s[i]);
-
-                // if i'th character is a space, let's plan
-                // to capitalize next alphabetical character we see
-                if (s[i] == ' ')
-                {
-                    capitalize = true;
-                }
+                output = true;
             }
         }
 
