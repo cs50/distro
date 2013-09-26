@@ -47,9 +47,13 @@ int main(int argc, string argv[])
     {
         // only encrypt letters, not other chars (e.g., digits)
         if (isupper(message[i]))
+        {
             message[i] = ((message[i] - 'A' + key) % NUM_LETTERS) + 'A';
+        }
         else if (islower(message[i]))
+        {
             message[i] = ((message[i] - 'a' + key) % NUM_LETTERS) + 'a';
+        }
     }
 
     // now "message" holds encrypted ciphertext

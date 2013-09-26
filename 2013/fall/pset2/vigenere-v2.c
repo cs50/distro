@@ -15,7 +15,7 @@
 // there are 26 letters in the English alphabet!
 #define NUM_LETTERS 26
 
-int main(int argc, string argv[]) 
+int main(int argc, string argv[])
 {
     // check for proper cmd line args
     if (argc != 2)
@@ -56,17 +56,29 @@ int main(int argc, string argv[])
             // turn our keyword letter into an integer key in range [0, 25)
             int key;
             if (isupper(keyword[num_letters_seen % keyword_length]))
+            {
                 key = keyword[num_letters_seen % keyword_length] - 'A';
+            }
             else
+            {
                 key = keyword[num_letters_seen % keyword_length] - 'a';
+            }
 
             // encrypt the current message letter just like a Caesar cipher
             if (isupper(message[i]))
+            {
                 printf("%c", ((message[i] - 'A' + key) % NUM_LETTERS) + 'A');
+            }
             else
+            {
                 printf("%c", ((message[i] - 'a' + key) % NUM_LETTERS) + 'a');
+            }
             
             num_letters_seen++;
+        }
+        else
+        {
+            printf("%c", message[i]);
         }
     }
     printf("\n");

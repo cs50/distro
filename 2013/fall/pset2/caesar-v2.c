@@ -47,9 +47,17 @@ int main(int argc, string argv[])
     {
         // only encrypt letters, not other chars (e.g., digits)
         if (isupper(message[i]))
+        {
             printf("%c", ((message[i] - 'A' + key) % NUM_LETTERS) + 'A');
+        }
         else if (islower(message[i]))
+        {
             printf("%c", ((message[i] - 'a' + key) % NUM_LETTERS) + 'a');
+        }
+        else
+        {
+            printf("%c", message[i]);
+        }
     }
 
     // now "message" holds encrypted ciphertext
