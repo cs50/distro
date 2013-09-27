@@ -82,7 +82,7 @@ int main(int argc, string argv[])
 
         // if we broke out of the while loop by hitting the final \0 in idx,
         // then we've tried all possible strings, and none of them were correct
-        if (idx >= MAX_LENGTH)
+        if (idx == MAX_LENGTH)
         {
             printf("Couldn't find a password that encrypts to %s\n", encrypted);
             return 3;
