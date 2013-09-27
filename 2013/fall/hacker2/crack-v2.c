@@ -45,9 +45,10 @@ int main(int argc, string argv[])
     char salt[SALT_LENGTH + 1] = {0};
     strncpy(salt, encrypted, SALT_LENGTH);
 
-    // we'll use guess to iterate over all possible 8-character passwords
+    // we'll use guess to iterate over all possible 8-character (or fewer)
+    // passwords
     char guess[MAX_LENGTH + 1] = {MIN_SYMBOL, 0};
-    
+
     // we should never break out of this loop. either we'll find the
     // password, or return when we've exhausted all possible options
     while (1)
