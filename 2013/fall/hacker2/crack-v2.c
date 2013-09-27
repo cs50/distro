@@ -90,13 +90,13 @@ int main(int argc, string argv[])
 
         // actually increment the character found in the while loop above
         if (guess[idx] == '\0')
-	{
-	    guess[idx] = MIN_SYMBOL;
-	}
-	else
-	{
-	    guess[idx]++;
-	}
+        {
+            guess[idx] = MIN_SYMBOL;
+        }
+        else
+        {
+            guess[idx]++;
+        }
     }
 
     // can never reach here
