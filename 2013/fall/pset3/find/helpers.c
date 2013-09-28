@@ -20,8 +20,7 @@ const int LIMIT = 65536;
  * Returns true if value is in array of n values, else false.
  * Uses a recursive binary search algorithm.
  */
-bool 
-search(int value, int array[], int n)
+bool search(int value, int values[], int n)
 {
     // If array has size 0, can't search.
     if(n == 0)
@@ -29,7 +28,7 @@ search(int value, int array[], int n)
         
     // If the "middle" element in array equals value, return true. 
     int middle = n/2;
-    if(array[middle] == value)
+    if(values[middle] == value)
         return true;
         
     /* If the middle element was lower/higher than what we are looking for, 
@@ -37,10 +36,10 @@ search(int value, int array[], int n)
      * middle element) of the array with the size of array cut from middle 
      * over in the first case and set equal to middle in the latter.
      */
-    else if(array[middle] < value)
-        return search(value,array+middle+1,n-middle-1);
+    else if(values[middle] < value)
+        return search(value,values+middle+1,n-middle-1);
     else
-        return search(value, array, middle);
+        return search(value, values, middle);
 }
 
 
@@ -49,8 +48,7 @@ search(int value, int array[], int n)
  * successful, else false.
  * Implemented using selection sort.
  */
-bool
-sort(int values[], int n)
+void sort(int values[], int n)
 {
     // iterate over values, finding the i'th lowest # to go in the i'th index
     for(int i = 0, min, swaptemp; i < n-1; i++)
@@ -76,6 +74,4 @@ sort(int values[], int n)
             values[min] = swaptemp;
         }
     }
-    // And it's sorted!
-    return true;
 }
