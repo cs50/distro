@@ -4,7 +4,7 @@
  * Computer Science 50
  * Problem Set 3
  *
- * Robert Bowden
+ * Rob Bowden (rob@cs.harvard.edu)
  *
  * Helper functions for Problem Set 3.
  */
@@ -70,14 +70,9 @@ void sort(int values[], int n)
             }
         }
         
-        // checks to see if the lowest # we found is already in its correct 
-        // position; not exactly necessary, since we would just swap the number
-        // with itself, but it may or may not save a few clock cycles
-        if (min != i)
-        {
-            swaptemp = values[i];
-            values[i] = values[min];
-            values[min] = swaptemp;
-        }
+        // swap the minimum value into the i'th position
+        swaptemp = values[i];
+        values[i] = values[min];
+        values[min] = swaptemp;
     }
 }

@@ -55,7 +55,7 @@ void sort(int values[], int n)
 {
     // counting_array is of size LIMIT, equal to the highest random number
     // generate can output
-    int counting_array[LIMIT * sizeof(int)] = { 0 };
+    int counting_array[LIMIT] = { 0 };
     
     // iterate through values, incrementing counting array at the index that
     // is equal to values[i]
