@@ -6,7 +6,7 @@
 #
 
 fifteen: fifteen.c
-	gcc -std=c99 -Wall -Werror -o fifteen fifteen.c -lcs50
+	clang -std=c99 -O0 -Wall -Werror -o fifteen fifteen.c -lcs50
 
 clean:
-	rm -f *.o a.out core fifteen
+	rm -f *.o core fifteen
