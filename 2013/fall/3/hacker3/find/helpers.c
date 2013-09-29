@@ -51,7 +51,7 @@ bool search(int value, int array[], int n)
  * Sorts array of n values.  Returns true if successful, else false.
  * Implemented using counting sort.
  */
-bool sort(int values[], int n)
+void sort(int values[], int n)
 {
     // counting_array is of size LIMIT, equal to the highest random number
     // generate can output
@@ -75,35 +75,4 @@ bool sort(int values[], int n)
             values[i + j] = z;
         }
     }
-
-    // values is now sorted!
-    return true;
-}
- *
- * Computer Science 50
- * Problem Set 3
- *
- * Helper functions for Problem Set 3.
- */
-       
-#include <cs50.h>
-
-#include "helpers.h"
-
-/**
- * Returns true if value is in array of n values, else false.
- */
-bool search(int value, int values[], int n)
-{
-    // TODO: implement a searching algorithm
-    return false;
-}
-
-/**
- * Sorts array of n values.
- */
-void sort(int values[], int n)
-{
-    // TODO: implement an O(n^2) sorting algorithm
-    return;
 }

@@ -1,4 +1,4 @@
-/**
+/***************************************************************************
  * generate.c
  *
  * Computer Science 50
@@ -10,28 +10,29 @@
  *
  * where n is number of pseudorandom numbers to print
  * and s is an optional seed
- */
+ ***************************************************************************/
        
-#include <cs50.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#define LIMIT 65536
+#include "helpers.h"
 
 int main(int argc, string argv[])
 {
-    // TODO: comment me
+    // quits program and displays usage if the number of random numbers to
+    // generate and an optional seed were not entered at the command line
     if (argc != 2 && argc != 3)
     {
-        printf("Usage: ./generate n [s]\n");
+        printf("Usage: generate n [s]\n");
         return 1;
     }
 
-    // TODO: comment me
+    // Converts desired number of random numbers from a string to an int
     int n = atoi(argv[1]);
 
-    // TODO: comment me
+    // if a seed was entered at the command line, use that for srand, else
+    // just time(NULL)
     if (argc == 3)
     {
         srand((unsigned int) atoi(argv[2]));
@@ -41,10 +42,10 @@ int main(int argc, string argv[])
         srand((unsigned int) time(NULL));
     }
 
-    // TODO: comment me
+    // prints the desired number of random numbers, all 0 <= and < LIMIT
     for (int i = 0; i < n; i++)
     {
-        printf("%i\n", rand() % LIMIT);
+        printf("%d\n", rand() % LIMIT);
     }
 
     // that's all folks
