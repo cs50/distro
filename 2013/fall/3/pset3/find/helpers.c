@@ -2,9 +2,9 @@
  * helpers.c
  * 
  * Computer Science 50
- * Robert Bowden
- *
  * Problem Set 3
+ *
+ * Robert Bowden
  *
  * Helper functions for Problem Set 3.
  */

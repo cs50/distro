@@ -1,16 +1,16 @@
-/****************************************************************************
+/**
  * find.c
  *
  * Computer Science 50
  * Problem Set 3
  *
- * Prompts user for as many as HAY_MAX values until EOF is reached, 
+ * Prompts user for as many as MAX values until EOF is reached, 
  * then proceeds to search that "haystack" of values for given needle.
  *
  * Usage: ./find needle
  *
  * where needle is the value to find in a haystack of values
- ***************************************************************************/
+ */
        
 #include <cs50.h>
 #include <stdio.h>
@@ -18,19 +18,16 @@
 
 #include "helpers.h"
 
-
 // maximum amount of hay
-const int HAY_MAX = 65536;
+const int MAX = 65536;
 
-
-int
-main(int argc, char *argv[])
+int main(int argc, string argv[])
 {
     // ensure proper usage
     if (argc != 2)
     {
         printf("Usage: ./find needle\n");
-        return 1;
+        return -1;
     }
 
     // remember needle
@@ -38,27 +35,24 @@ main(int argc, char *argv[])
 
     // fill haystack
     int size;
-    int haystack[HAY_MAX];
-    for (size = 0; size < HAY_MAX; size++)
+    int haystack[MAX];
+    for (size = 0; size < MAX; size++)
     {
         // wait for hay until EOF
         printf("\nhaystack[%d] = ", size);
         int straw = GetInt();
         if (straw == INT_MAX)
+        {
             break;
-        
+        }
+     
         // add hay to stack
         haystack[size] = straw;
-        printf("%d",straw);
     }
     printf("\n");
 
     // sort the haystack
-    if (!sort(haystack, size))
-    {
-        printf("Could not sort haystack.\n");
-        return 2;
-    }
+    sort(haystack, size);
 
     // try to find needle in haystack
     if (search(needle, haystack, size))
