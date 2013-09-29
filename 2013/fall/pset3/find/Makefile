@@ -14,4 +14,4 @@ generate: generate.c
 	clang -std=c99 -Wall -Werror -o generate generate.c
 
 clean:
-	rm -f *.o a.out core find generate
+	rm -f *.o core find generate
