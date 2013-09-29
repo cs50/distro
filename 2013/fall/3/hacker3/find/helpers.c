@@ -4,7 +4,7 @@
  * Computer Science 50
  * Problem Set 3
  *
- * Robert Bowden
+ * Rob Bowden (rob@cs.harvard.edu)
  *
  * Helper functions for Problem Set 3.
  */

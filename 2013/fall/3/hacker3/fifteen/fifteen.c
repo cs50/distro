@@ -4,6 +4,8 @@
  * Computer Science 50
  * Problem Set 3
  *
+ * Rob Bowden (rob@cs.harvard.edu)
+ *
  * Implements The Game of Fifteen (generalized to d x d).
  *
  * Usage: ./fifteen d
