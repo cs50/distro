@@ -56,12 +56,12 @@ bool search(int value, int values[], int n)
 void sort(int values[], int n)
 {
     // iterate over values, finding the i'th lowest # to go in the i'th index
-    for (int i = 0, min, swaptemp; i < n - 1; i++)
+    for (int i = 0; i < n - 1; i++)
     { 
         // at the beginning of each iteration, we know that the first (i-1)
         // elements are in their correct positions, so we search through the
         // rest of the array looking for the index of the lowest remaining #
-        min = i;
+        int min = i;
         for (int j = i; j < n - 1; j++)
         {
             if (values[j + 1] < values[min])
@@ -71,7 +71,7 @@ void sort(int values[], int n)
         }
         
         // swap the minimum value into the i'th position
-        swaptemp = values[i];
+        int swaptemp = values[i];
         values[i] = values[min];
         values[min] = swaptemp;
     }

@@ -11,6 +11,7 @@
 
 #include <cs50.h>
 #include "helpers.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 /**
@@ -64,15 +65,14 @@ void sort(int values[], int n)
         counting_array[values[i]]++;
     }
         
-    // the int stored in counting_array[i] is the number of i's in values,
-    // so we iterate over values, setting each index equal to the next number
-    // encountered in counting_array; if counting_array[0] == 6, then the first
-    // 6 elements of values are set to 0, and so on
-    for (int i = 0, z = 0; i < n; i += counting_array[z], z++)
+    // the int stored in counting_array[idx] is the number of idx's in
+    // "values"; if counting_array[0] == 6, then the first 6 elements of values
+    // are set to 0, and so on
+    for (int i = 0, idx = 0; i < n; idx++)
     {
-        for (int j = 0; j < counting_array[z]; j++)
+        for (int j = 0; j < counting_array[idx]; j++)
         {
-            values[i + j] = z;
+            values[i++] = idx;
         }
     }
 }
