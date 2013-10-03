@@ -6,10 +6,8 @@
  *
  * Helper functions for Problem Set 3.
  */
- 
-#include <cs50.h>
 
-#define LIMIT 65536
+#include <cs50.h>
 
 /**
  * Returns true if value is in array of n values, else false.

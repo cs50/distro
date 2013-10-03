@@ -11,12 +11,14 @@
  * where n is number of pseudorandom numbers to print
  * and s is an optional seed
  ***************************************************************************/
-       
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
 #include "helpers.h"
+
+#define LIMIT 65536
 
 int main(int argc, string argv[])
 {
