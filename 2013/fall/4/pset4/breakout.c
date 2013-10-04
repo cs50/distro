@@ -1,3 +1,10 @@
+//
+// breakout.c
+//
+// Computer Science 50
+// Problem Set 4
+//
+
 #include <stdio.h>
 
 // TODO: are all necessary?
@@ -48,15 +55,15 @@
 
 // prototypes
 void init(GWindow gw);
-GObject getCollidingObject(GWindow gw, GObject ball);
+GObject detect(GWindow gw, GObject ball);
 
 int main(void)
 {
     // initialize window
-    GWindow gw = newGWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
+    GWindow window = newGWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     // initialize game
-    init(gw);
+    init(window);
 
     // instantiate ball, centered in window
     double bx = WINDOW_WIDTH / 2 - RADIUS;
@@ -64,7 +71,7 @@ int main(void)
     GOval ball = newGOval(bx, by, 2 * RADIUS, 2 * RADIUS);
     setColor(ball, "BLACK");
     setFilled(ball, true);
-    add(gw, ball);
+    add(window, ball);
 
     // instantiate paddle, centered in window and bottom-aligned
     double px = (WINDOW_WIDTH - PADDLE_WIDTH) / 2;
@@ -72,10 +79,15 @@ int main(void)
     GRect paddle = newGRect(px, py, PADDLE_WIDTH, PADDLE_HEIGHT);
     setColor(ball, "BLACK");
     setFilled(paddle, true);
-    add(gw, paddle);
+    add(window, paddle);
 
+    // number of bricks initially
     int bricks = COLS * ROWS;
+
+    // number of lives initially
     int lives = 3;
+
+    // keep playing until game over
     while (lives > 0 && bricks > 0)
     {
         // wait for click to begin
@@ -137,11 +149,11 @@ int main(void)
                 }
 
                 // check whether ball's collided with anything
-                GObject collider = getCollidingObject(gw, ball);
-                if (collider != NULL)
+                GObject object = detect(window, ball);
+                if (object != NULL)
                 {
                     // if ball's collided with paddle, bounce
-                    if (collider == paddle)
+                    if (object == paddle)
                     {
                         vy = -vy;
                         setLocation(ball, getX(ball), getY(paddle) - 2 * RADIUS);
@@ -151,7 +163,7 @@ int main(void)
                     else
                     {
                         // remove brick from window
-                        removeGWindow(gw, collider);
+                        removeGWindow(window, object);
 
                         // decrement counter
                         bricks--;
@@ -182,7 +194,7 @@ int main(void)
 /**
  * Initializes the game with bricks.
  */
-void init(GWindow gw)
+void init(GWindow window)
 {
     double width = (WINDOW_WIDTH - GAP * COLS) / COLS;
     printf("%f\n", width);
@@ -237,29 +249,52 @@ void init(GWindow gw)
             setFilled(brick, true);
 
             // add brick to window
-            add(gw, brick);
+            add(window, brick);
         }
     }
 }
 
 /**
- * Returns object with which ball has collided, else NULL.
+ * Detects whether ball has collided with some object in window.
+ * Returns object if so, else NULL.
  */
-GObject getCollidingObject(GWindow gw, GObject ball)
+GObject detect(GWindow window, GObject ball)
 {
     // ball's location
     double x = getX(ball);
     double y = getY(ball);
 
-    // ball's diameter
-    double d = 2 * RADIUS;
+    // for checking for collisions
+    GObject object;
 
-    // get object at ball's location
-    GObject obj = getGObjectAt(gw, x, y);
+    // check for collision at ball's top-left corner
+    object = getGObjectAt(window, x, y);
+    if (object != NULL)
+    {
+        return object;
+    }
 
-    // TODO: use else-if
-    if (obj == NULL) obj = getGObjectAt(gw, x + d, y);
-    if (obj == NULL) obj = getGObjectAt(gw, x, y + d);
-    if (obj == NULL) obj = getGObjectAt(gw, x + d, y + d);
-    return obj;
+    // check for collision at ball's top-right corner
+    object = getGObjectAt(window, x + 2 * RADIUS, y);
+    if (object != NULL)
+    {
+        return object;
+    }
+
+    // check for collision at ball's bottom-left corner
+    object = getGObjectAt(window, x, y + 2 * RADIUS);
+    if (object != NULL)
+    {
+        return object;
+    }
+
+    // check for collision at ball's bottom-right corner
+    object = getGObjectAt(window, x + 2 * RADIUS, y + 2 * RADIUS);
+    if (object != NULL)
+    {
+        return object;
+    }
+
+    // no collision
+    return NULL;
 }
