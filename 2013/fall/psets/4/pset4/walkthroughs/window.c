@@ -7,9 +7,6 @@
 // Draws a window.
 //
 
-// standard libraries
-#include <stdio.h>
-
 // Stanford Portable Library
 #include "gwindow.h"
 

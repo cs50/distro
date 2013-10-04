@@ -7,9 +7,6 @@
 // Draws a circle that follows user's cursor within a window.
 //
 
-// standard libraries
-#include <stdio.h>
-
 // Stanford Portable Library
 #include "gevents.h"
 #include "gobjects.h"

@@ -6,15 +6,12 @@
 //
 // Prints cursor's location when mouse's button is clicked.
 //
-// TODO: use window, update Makefile?
-//
 
 // standard libraries
 #include <stdio.h>
 
 // Stanford Portable Library
 #include "gevents.h"
-#include "gobjects.h"
 #include "gwindow.h"
 
 int main(void)
