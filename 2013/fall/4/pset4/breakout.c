@@ -96,12 +96,14 @@ int main(void)
         // decrement lives
         lives--;
 
-        // horizontal speed
-        // TODO: use rand itself instead
-        double vx = randomReal(1, 2);
-        if (randomChance(0.5)) vx = -vx;
+        // horizontal velocity of ball
+        double vx = randomReal(-1, 1) * 2;
+        if (randomChance(0.5))
+        {
+            vx = -vx;
+        }
 
-        // vertical speed
+        // vertical velocity of ball
         double vy = 3.0;
 
         // while bricks remain and the ball's not below paddle
@@ -205,8 +207,6 @@ void init(GWindow window)
         {
             double x = GAP / 2 + col * (width + GAP);
 
-            printf("row %i, col %i is at x=%f, y = %f\n", row, col, x, y);
-
             // instantiate brick
             GRect brick = newGRect(x, y, width, BRICK_HEIGHT);
 
@@ -242,7 +242,6 @@ void init(GWindow window)
                 default:
                     setColor(brick, "GRAY");
                     break;
-
             }
 
             // fill brick with color
