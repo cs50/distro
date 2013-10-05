@@ -1,8 +1,8 @@
 //
 // breakout.c
 //
-// Computer Science 50
-// Problem Set 4
+// David J. Malan
+// malan@harvard.edu
 //
 
 // standard libraries
