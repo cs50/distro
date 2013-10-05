@@ -49,7 +49,7 @@
 #define MARGIN 50
 
 // how many milliseconds to wait after ball's moved before moving again
-#define NAPTIME 1
+#define NAPTIME 10
 
 // how many milliseconds to wait after ball's been lost
 #define LIFETIME 500
