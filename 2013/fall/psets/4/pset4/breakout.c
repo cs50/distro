@@ -49,7 +49,7 @@
 #define MARGIN 50
 
 // how many milliseconds to wait after ball's moved before moving again
-#define NAPTIME 10
+#define NAPTIME 1
 
 // how many milliseconds to wait after ball's been lost
 #define LIFETIME 500
@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
         double vy = 3.0;
 
         // while bricks remain and the ball's not missed the paddle
-        while (getY(ball) < HEIGHT - 2 * RADIUS)
+        while (bricks > 0 && getY(ball) < HEIGHT - 2 * RADIUS)
         {
             // check for mouse event
             GEvent e = getNextEvent(MOUSE_EVENT);
