@@ -58,9 +58,9 @@
 void initBricks(GWindow window);
 GOval initBall(GWindow window);
 GRect initPaddle(GWindow window);
-GObject detectCollision(GWindow window, GObject ball);
 GLabel initScoreboard(GWindow window);
 void updateScoreboard(GWindow window, GLabel label, int points);
+GObject detectCollision(GWindow window, GOval ball);
 
 int main(int argc, char* argv[])
 {
@@ -319,12 +319,42 @@ GRect initPaddle(GWindow window)
 }
 
 /**
+ * Instantiates, configures, and returns label for scoreboard.
+ */
+GLabel initScoreboard(GWindow window)
+{
+    GLabel label = newGLabel("");
+    setColor(label, "LIGHT_GRAY");
+    setFont(label, "SansSerif-48");
+    add(window, label);
+    sendToBack(label);
+    updateScoreboard(window, label, 0);
+    return label;
+}
+
+/**
+ * Updates scoreboard's label, keeping it centered in window.
+ */
+void updateScoreboard(GWindow window, GLabel label, int points)
+{
+    // update label
+    char s[12];
+    sprintf(s, "%i", points);
+    setLabel(label, s);
+
+    // center label
+    double x = (getWidth(window) - getWidth(label)) / 2;
+    double y = (getHeight(window) - getHeight(label)) / 2;
+    setLocation(label, x, y);
+}
+
+/**
  * Detects whether ball has collided with some object in window
  * by checking the four corners of its bounding box (which are
  * outside the ball's GOval, and so the ball can't collide with
  * itself).  Returns object if so, else NULL.
  */
-GObject detectCollision(GWindow window, GObject ball)
+GObject detectCollision(GWindow window, GOval ball)
 {
     // ball's location
     double x = getX(ball);
@@ -363,34 +393,4 @@ GObject detectCollision(GWindow window, GObject ball)
 
     // no collision
     return NULL;
-}
-
-/**
- * Instantiates, configures, and returns label for scoreboard.
- */
-GLabel initScoreboard(GWindow window)
-{
-    GLabel label = newGLabel("");
-    setColor(label, "LIGHT_GRAY");
-    setFont(label, "SansSerif-48");
-    add(window, label);
-    sendToBack(label);
-    updateScoreboard(window, label, 0);
-    return label;
-}
-
-/**
- * Updates scoreboard's label, keeping it centered in window.
- */
-void updateScoreboard(GWindow window, GLabel label, int points)
-{
-    // update label
-    char s[12];
-    sprintf(s, "%i", points);
-    setLabel(label, s);
-
-    // center label
-    double x = (getWidth(window) - getWidth(label)) / 2;
-    double y = (getHeight(window) - getHeight(label)) / 2;
-    setLocation(label, x, y);
 }
