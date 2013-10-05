@@ -20,8 +20,8 @@
 #include "gwindow.h"
 
 // height and width of game's window in pixels
-#define WINDOW_HEIGHT 600
-#define WINDOW_WIDTH 400
+#define HEIGHT 600
+#define WIDTH 400
 
 // height of a brick in pixels
 #define BRICK_HEIGHT 10
@@ -59,8 +59,8 @@ void initBricks(GWindow window);
 GOval initBall(GWindow window);
 GRect initPaddle(GWindow window);
 GObject detectCollision(GWindow window, GObject ball);
-GLabel initPoints(GWindow window);
-void updatePoints(GWindow window, GLabel label, int points);
+GLabel initScoreboard(GWindow window);
+void updateScoreboard(GWindow window, GLabel label, int points);
 
 int main(int argc, char* argv[])
 {
@@ -71,20 +71,23 @@ int main(int argc, char* argv[])
         god = true;
     }
 
-    // initialize window
-    GWindow window = newGWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
+    // seed pseudorandom number generator
+    srand48(time(NULL));
 
-    // initialize bricks
+    // instantiate window
+    GWindow window = newGWindow(WIDTH, HEIGHT);
+
+    // instantiate bricks
     initBricks(window);
 
-    // initialize ball, centered in middle of window
+    // instantiate ball, centered in middle of window
     GOval ball = initBall(window);
 
-    // initialize paddle, centered at bottom of window
+    // instantiate paddle, centered at bottom of window
     GRect paddle = initPaddle(window);
 
-    // initialize points, centered in middle of window, just above ball
-    GLabel label = initPoints(window);
+    // instantiate scoreboard, centered in middle of window, just above ball
+    GLabel label = initScoreboard(window);
 
     // number of bricks initially
     int bricks = COLS * ROWS;
@@ -94,9 +97,6 @@ int main(int argc, char* argv[])
 
     // number of points initially
     int points = 0;
-
-    // seed pseudorandom number generator
-    srand48(time(NULL));
 
     // keep playing until game over
     while (lives > 0 && bricks > 0)
@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
         double vy = 3.0;
 
         // while bricks remain and the ball's not missed the paddle
-        while (getY(ball) < WINDOW_HEIGHT - 2 * RADIUS)
+        while (getY(ball) < HEIGHT - 2 * RADIUS)
         {
             // check for mouse event
             GEvent e = getNextEvent(MOUSE_EVENT);
@@ -137,9 +137,9 @@ int main(int argc, char* argv[])
                     {
                         px = 0;
                     }
-                    else if (px > WINDOW_WIDTH - PADDLE_WIDTH)
+                    else if (px > WIDTH - PADDLE_WIDTH)
                     {
-                        px = WINDOW_WIDTH - PADDLE_WIDTH;
+                        px = WIDTH - PADDLE_WIDTH;
                     }
                     setLocation(paddle, px, getY(paddle));
                 }
@@ -159,7 +159,7 @@ int main(int argc, char* argv[])
                 }
 
                 // if ball's at left or right edge, bounce
-                if (getX(ball) < 0 || getX(ball) > WINDOW_WIDTH - 2 * RADIUS)
+                if (getX(ball) < 0 || getX(ball) > WIDTH - 2 * RADIUS)
                 {
                     vx = -vx;
                 }
@@ -193,8 +193,8 @@ int main(int argc, char* argv[])
                         // increment points
                         points++;
 
-                        // update display of points
-                        updatePoints(window, label, points);
+                        // update scoreboard
+                        updateScoreboard(window, label, points);
 
                         // bounce
                         vy = -vy;
@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
         // re-center ball
         if (lives > 0)
         {
-            setLocation(ball, WINDOW_WIDTH / 2 - RADIUS, WINDOW_HEIGHT / 2 - RADIUS);
+            setLocation(ball, WIDTH / 2 - RADIUS, HEIGHT / 2 - RADIUS);
         }
 
         // pause before starting new life
@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
 void initBricks(GWindow window)
 {
     // determine width of each brick
-    double width = (WINDOW_WIDTH - GAP * COLS) / COLS;
+    double width = (WIDTH - GAP * COLS) / COLS;
 
     // for each row
     for (int row = 0; row < ROWS; row++)
@@ -295,8 +295,8 @@ void initBricks(GWindow window)
  */
 GOval initBall(GWindow window)
 {
-    double bx = WINDOW_WIDTH / 2 - RADIUS;
-    double by = WINDOW_HEIGHT / 2 - RADIUS;
+    double bx = WIDTH / 2 - RADIUS;
+    double by = HEIGHT / 2 - RADIUS;
     GOval ball = newGOval(bx, by, 2 * RADIUS, 2 * RADIUS);
     setColor(ball, "BLACK");
     setFilled(ball, true);
@@ -309,8 +309,8 @@ GOval initBall(GWindow window)
  */
 GRect initPaddle(GWindow window)
 {
-    double x = (WINDOW_WIDTH - PADDLE_WIDTH) / 2;
-    double y = WINDOW_HEIGHT - PADDLE_HEIGHT - MARGIN;
+    double x = (WIDTH - PADDLE_WIDTH) / 2;
+    double y = HEIGHT - PADDLE_HEIGHT - MARGIN;
     GRect paddle = newGRect(x, y, PADDLE_WIDTH, PADDLE_HEIGHT);
     setColor(paddle, "BLACK");
     setFilled(paddle, true);
@@ -366,23 +366,23 @@ GObject detectCollision(GWindow window, GObject ball)
 }
 
 /**
- * Instantiates, configures, and returns label for points.
+ * Instantiates, configures, and returns label for scoreboard.
  */
-GLabel initPoints(GWindow window)
+GLabel initScoreboard(GWindow window)
 {
     GLabel label = newGLabel("");
     setColor(label, "LIGHT_GRAY");
     setFont(label, "SansSerif-48");
     add(window, label);
     sendToBack(label);
-    updatePoints(window, label, 0);
+    updateScoreboard(window, label, 0);
     return label;
 }
 
 /**
- * Updates points' label, keeping it centered in window.
+ * Updates scoreboard's label, keeping it centered in window.
  */
-void updatePoints(GWindow window, GLabel label, int points)
+void updateScoreboard(GWindow window, GLabel label, int points)
 {
     // update label
     char s[12];
