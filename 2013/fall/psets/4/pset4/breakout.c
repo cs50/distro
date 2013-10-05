@@ -6,14 +6,16 @@
 //
 
 // standard libraries
+#define _XOPEN_SOURCE
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 // Stanford Portable Library
-#include "cslib.h"
 #include "gevents.h"
 #include "gobjects.h"
 #include "gwindow.h"
-#include "random.h"
 
 // height and width of game's window in pixels
 #define WINDOW_HEIGHT 600
@@ -28,7 +30,7 @@
 // number of columns of bricks
 #define COLS 10
 
-// gap between blocks in pixels
+// gap between bricks in pixels
 #define GAP 5
 
 // height and width of paddle
@@ -44,17 +46,19 @@
 // margin above bricks and below paddle
 #define MARGIN 50
 
-// how many milliseconds to wait between checks for mouse events
+// how many milliseconds to wait after ball's moved before moving again
 #define NAPTIME 10
 
 // how many milliseconds to wait after ball's been lost
 #define LIFETIME 500
 
 // prototypes
-void initBricks(GWindow gw);
-GOval initBall(GWindow gw);
-GRect initPaddle(GWindow gw);
-GObject detectCollision(GWindow gw, GObject ball);
+void initBricks(GWindow window);
+GOval initBall(GWindow window);
+GRect initPaddle(GWindow window);
+GObject detectCollision(GWindow window, GObject ball);
+GLabel initPoints(GWindow window);
+void updatePoints(GWindow window, GLabel label, int points);
 
 int main(void)
 {
@@ -64,17 +68,26 @@ int main(void)
     // initialize bricks
     initBricks(window);
 
+    // number of bricks initially
+    int bricks = COLS * ROWS;
+
     // initialize ball, centered in middle of window
     GOval ball = initBall(window);
 
     // initialize ball, centered at bottom of window
     GRect paddle = initPaddle(window);
 
-    // number of bricks initially
-    int bricks = COLS * ROWS;
-
     // number of lives initially
     int lives = LIVES;
+
+    // number of points initially
+    int points = 0;
+
+    // initialize points, centered in middle of window, just above ball
+    GLabel label = initPoints(window);
+
+    // seed pseudorandom number generator
+    srand48(time(NULL));
 
     // keep playing until game over
     while (lives > 0 && bricks > 0)
@@ -85,9 +98,11 @@ int main(void)
         // decrement lives
         lives--;
 
-        // horizontal velocity of ball
-        double vx = randomReal(1.0, 2.0);
-        if (randomChance(0.5))
+        // generate random horizontal velocity for ball in [1.0, 2.0)
+        double vx = drand48() + 1.0;
+
+        // invert direction with 50/50 probability
+        if (drand48() < 0.5)
         {
             vx = -vx;
         }
@@ -95,8 +110,8 @@ int main(void)
         // vertical velocity of ball
         double vy = 3.0;
 
-        // while bricks remain and the ball's not below paddle
-        while (bricks > 0 && getY(ball) < WINDOW_HEIGHT - RADIUS)
+        // while bricks remain and the ball's not missed the paddle
+        while (bricks > 0 && getY(ball) < WINDOW_HEIGHT - 2 * RADIUS)
         {
             // check for mouse event
             GEvent e = getNextEvent(MOUSE_EVENT);
@@ -151,13 +166,19 @@ int main(void)
                     }
 
                     // if ball's collided with brick
-                    else
+                    else if (strcmp(getType(object), "GRect") == 0)
                     {
                         // remove brick from window
                         removeGWindow(window, object);
 
                         // decrement counter
                         bricks--;
+
+                        // increment points
+                        points++;
+
+                        // update display of points
+                        updatePoints(window, label, points);
 
                         // bounce
                         vy = -vy;
@@ -272,9 +293,9 @@ GOval initBall(GWindow window)
  */
 GRect initPaddle(GWindow window)
 {
-    double px = (WINDOW_WIDTH - PADDLE_WIDTH) / 2;
-    double py = WINDOW_HEIGHT - PADDLE_HEIGHT - MARGIN;
-    GRect paddle = newGRect(px, py, PADDLE_WIDTH, PADDLE_HEIGHT);
+    double x = (WINDOW_WIDTH - PADDLE_WIDTH) / 2;
+    double y = WINDOW_HEIGHT - PADDLE_HEIGHT - MARGIN;
+    GRect paddle = newGRect(x, y, PADDLE_WIDTH, PADDLE_HEIGHT);
     setColor(paddle, "BLACK");
     setFilled(paddle, true);
     add(window, paddle);
@@ -282,8 +303,10 @@ GRect initPaddle(GWindow window)
 }
 
 /**
- * Detects whether ball has collided with some object in window.
- * Returns object if so, else NULL.
+ * Detects whether ball has collided with some object in window
+ * by checking the four corners of its bounding box (which are
+ * outside the ball's GOval, and so the ball can't collide with
+ * itself).  Returns object if so, else NULL.
  */
 GObject detectCollision(GWindow window, GObject ball)
 {
@@ -324,4 +347,34 @@ GObject detectCollision(GWindow window, GObject ball)
 
     // no collision
     return NULL;
+}
+
+/**
+ * Initializes label for points.
+ */
+GLabel initPoints(GWindow window)
+{
+    GLabel label = newGLabel("");
+    setColor(label, "LIGHT_GRAY");
+    setFont(label, "SansSerif-48");
+    add(window, label);
+    sendToBack(label);
+    updatePoints(window, label, 0);
+    return label;
+}
+
+/**
+ * Displays points in center of window.
+ */
+void updatePoints(GWindow window, GLabel label, int points)
+{
+    // update label
+    char s[11];
+    sprintf(s, "%i", points);
+    setLabel(label, s);
+
+    // center label
+    double x = (getWidth(window) - getWidth(label)) / 2;
+    double y = (getHeight(window) - getHeight(label)) / 2;
+    setLocation(label, x, y);
 }

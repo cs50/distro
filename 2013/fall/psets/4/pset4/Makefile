@@ -6,7 +6,7 @@
 #
 
 breakout: breakout.c
-	clang -ggdb3 -Iinclude -O0 -std=c99 -Wall -Werror -o breakout breakout.c -Llib -lcs -lm
+	clang -ggdb3 -Ispl/include -O0 -std=c99 -Wall -Werror -o breakout breakout.c -Lspl/lib -lcs -lm
 
 clean:
 	rm -f *.o core breakout

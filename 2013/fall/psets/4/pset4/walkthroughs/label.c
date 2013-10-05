@@ -20,7 +20,7 @@ int main(void)
     GWindow window = newGWindow(320, 240);
 
     // instantiate label
-    GLabel label = newGLabel("test\n");
+    GLabel label = newGLabel("");
     setFont(label, "SansSerif-36");
     add(window, label);
 
