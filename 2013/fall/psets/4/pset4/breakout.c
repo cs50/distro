@@ -7,9 +7,11 @@
 
 // standard libraries
 #define _XOPEN_SOURCE
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <time.h>
 
 // Stanford Portable Library
@@ -60,31 +62,38 @@ GObject detectCollision(GWindow window, GObject ball);
 GLabel initPoints(GWindow window);
 void updatePoints(GWindow window, GLabel label, int points);
 
-int main(void)
+int main(int argc, char* argv[])
 {
+    // check for GOD mode
+    bool god = false;
+    if (argc == 2 && strcasecmp(argv[1], "GOD") == 0)
+    {
+        god = true;
+    }
+
     // initialize window
     GWindow window = newGWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     // initialize bricks
     initBricks(window);
 
-    // number of bricks initially
-    int bricks = COLS * ROWS;
-
     // initialize ball, centered in middle of window
     GOval ball = initBall(window);
 
-    // initialize ball, centered at bottom of window
+    // initialize paddle, centered at bottom of window
     GRect paddle = initPaddle(window);
+
+    // initialize points, centered in middle of window, just above ball
+    GLabel label = initPoints(window);
+
+    // number of bricks initially
+    int bricks = COLS * ROWS;
 
     // number of lives initially
     int lives = LIVES;
 
     // number of points initially
     int points = 0;
-
-    // initialize points, centered in middle of window, just above ball
-    GLabel label = initPoints(window);
 
     // seed pseudorandom number generator
     srand48(time(NULL));
@@ -111,13 +120,13 @@ int main(void)
         double vy = 3.0;
 
         // while bricks remain and the ball's not missed the paddle
-        while (bricks > 0 && getY(ball) < WINDOW_HEIGHT - 2 * RADIUS)
+        while (getY(ball) < WINDOW_HEIGHT - 2 * RADIUS)
         {
             // check for mouse event
             GEvent e = getNextEvent(MOUSE_EVENT);
 
             // if we heard one
-            if (e != NULL)
+            if (god != true && e != NULL)
             {
                 // if the event was movement
                 if (getEventType(e) == MOUSE_MOVED)
@@ -141,6 +150,13 @@ int main(void)
             {
                 // move ball
                 move(ball, vx, vy);
+
+                // if in GOD mode, keep paddle aligned with ball
+                if (god == true)
+                {
+                    double x = getX(ball) + getWidth(ball) / 2 - getWidth(paddle) / 2;
+                    setLocation(paddle, x, getY(paddle));
+                }
 
                 // if ball's at left or right edge, bounce
                 if (getX(ball) < 0 || getX(ball) > WINDOW_WIDTH - 2 * RADIUS)
@@ -209,7 +225,7 @@ int main(void)
 }
 
 /**
- * Initializes the game with bricks.
+ * Initializes window with a grid of bricks.
  */
 void initBricks(GWindow window)
 {
@@ -350,7 +366,7 @@ GObject detectCollision(GWindow window, GObject ball)
 }
 
 /**
- * Initializes label for points.
+ * Instantiates, configures, and returns label for points.
  */
 GLabel initPoints(GWindow window)
 {
@@ -364,12 +380,12 @@ GLabel initPoints(GWindow window)
 }
 
 /**
- * Displays points in center of window.
+ * Updates points' label, keeping it centered in window.
  */
 void updatePoints(GWindow window, GLabel label, int points)
 {
     // update label
-    char s[11];
+    char s[12];
     sprintf(s, "%i", points);
     setLabel(label, s);
 
