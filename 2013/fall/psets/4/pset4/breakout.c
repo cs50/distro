@@ -51,9 +51,6 @@
 // how many milliseconds to wait after ball's moved before moving again
 #define NAPTIME 10
 
-// how many milliseconds to wait after ball's been lost
-#define LIFETIME 500
-
 // how many different colors we have for the rows of bricks
 #define NUM_COLORS 5
 
@@ -103,6 +100,9 @@ int main(int argc, char* argv[])
 
         // decrement lives
         lives--;
+
+        // center ball
+        setLocation(ball, WIDTH / 2 - RADIUS, HEIGHT / 2 - RADIUS);
 
         // generate random horizontal velocity for ball in [1.0, 2.0)
         double vx = drand48() + 1.0;
@@ -195,15 +195,6 @@ int main(int argc, char* argv[])
                 pause(NAPTIME);
             }
         }
-
-        // re-center ball
-        if (lives > 0)
-        {
-            setLocation(ball, WIDTH / 2 - RADIUS, HEIGHT / 2 - RADIUS);
-        }
-
-        // pause before starting new life
-        pause(LIFETIME);
     }
 
     // wait for click before exiting
