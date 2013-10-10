@@ -54,6 +54,9 @@
 // how many milliseconds to wait after ball's been lost
 #define LIFETIME 500
 
+// how many different colors we have for the rows of bricks
+#define NUM_COLORS 5
+
 // prototypes
 void initBricks(GWindow window);
 GOval initBall(GWindow window);
@@ -64,12 +67,6 @@ GObject detectCollision(GWindow window, GOval ball);
 
 int main(int argc, char* argv[])
 {
-    // check for GOD mode
-    bool god = false;
-    if (argc == 2 && strcasecmp(argv[1], "GOD") == 0)
-    {
-        god = true;
-    }
 
     // seed pseudorandom number generator
     srand48(time(NULL));
@@ -126,7 +123,7 @@ int main(int argc, char* argv[])
             GEvent e = getNextEvent(MOUSE_EVENT);
 
             // if we heard one
-            if (god != true && e != NULL)
+            if (e != NULL)
             {
                 // if the event was movement
                 if (getEventType(e) == MOUSE_MOVED)
@@ -150,13 +147,6 @@ int main(int argc, char* argv[])
             {
                 // move ball
                 move(ball, vx, vy);
-
-                // if in GOD mode, keep paddle aligned with ball
-                if (god == true)
-                {
-                    double x = getX(ball) + getWidth(ball) / 2 - getWidth(paddle) / 2;
-                    setLocation(paddle, x, getY(paddle));
-                }
 
                 // if ball's at left or right edge, bounce
                 if (getX(ball) < 0 || getX(ball) > WIDTH - 2 * RADIUS)
@@ -201,7 +191,7 @@ int main(int argc, char* argv[])
                     }
                 }
 
-                // slow down animation 
+                // slow down animation
                 pause(NAPTIME);
             }
         }
@@ -232,6 +222,8 @@ void initBricks(GWindow window)
     // determine width of each brick
     double width = (WIDTH - GAP * COLS) / COLS;
 
+    string colors[NUM_COLORS] = {"RED", "ORANGE", "YELLOW", "GREEN", "CYAN"};
+
     // for each row
     for (int row = 0; row < ROWS; row++)
     {
@@ -248,38 +240,7 @@ void initBricks(GWindow window)
             GRect brick = newGRect(x, y, width, BRICK_HEIGHT);
 
             // set brick's color
-            switch (row)
-            {
-                // RED
-                case 0:
-                    setColor(brick, "RED");
-                    break;
-
-                // ORANGE
-                case 1:
-                    setColor(brick, "ORANGE");
-                    break;
-
-                // YELLOW 
-                case 2:
-                    setColor(brick, "YELLOW");
-                    break;
-
-                // GREEN
-                case 3:
-                    setColor(brick, "GREEN");
-                    break;
-
-                // CYAN
-                case 4:
-                    setColor(brick, "CYAN");
-                    break;
-
-                // GRAY
-                default:
-                    setColor(brick, "GRAY");
-                    break;
-            }
+            setColor(brick, colors[row % NUM_COLORS]);
 
             // fill brick with color
             setFilled(brick, true);
