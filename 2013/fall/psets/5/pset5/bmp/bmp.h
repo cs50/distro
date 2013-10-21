@@ -1,11 +1,11 @@
-/****************************************************************************
+/**
  * bmp.h
  *
  * Computer Science 50
- * Problem Set 4
+ * Problem Set 5
  *
  * BMP-related data types based on Microsoft's own.
- ***************************************************************************/
+ */
 
 #include <stdint.h>
 
@@ -15,7 +15,7 @@
  * The data types in this section are essentially aliases for C/C++ 
  * primitive data types.
  *
- * Adapted from http://msdn.microsoft.com/en-us/library/cc230309(PROT.10).aspx.
+ * Adapted from http://msdn.microsoft.com/en-us/library/cc230309.aspx.
  * See http://en.wikipedia.org/wiki/Stdint.h for more on stdint.h.
  */
 typedef uint8_t  BYTE;
