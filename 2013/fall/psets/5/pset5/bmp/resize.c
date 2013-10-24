@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
     int padding = (4 - (bi.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
 
     // update BITMAPINFOHEADER with new image size
-    bi.biSizeImage = ((3 * bi.biWidth) + padding) * abs(bi.biHeight);
+    bi.biSizeImage = ((sizeof(RGBTRIPLE) * bi.biWidth) + padding) * abs(bi.biHeight);
 
     // update BITMAPFILEHEADER with new bitmap file size
     bf.bfSize = bi.biSizeImage + sizeof(BITMAPFILEHEADER)
