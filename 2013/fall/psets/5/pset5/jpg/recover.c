@@ -33,13 +33,13 @@
 
 /**
  * Returns true iff we've got a JPEG header as defined in the pset
- * specification. 
+ * specification.
  */
 bool is_jpeg_header(unsigned char header[])
 {
-    return (header[0] == SOI_0 &&
-            header[1] == SOI_1 &&
-            header[2] == APPN &&
+    return (header[0] == SOI_0 && 
+            header[1] == SOI_1 && 
+            header[2] == APPN && 
             (header[3] == APP0 || header[3] == APP1));
 }
 
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
                 return 1;
             }
         }
-        
+
         // if we've got a JPEG open, then write data to it
         if (jpeg_file != NULL)
         {

@@ -5,7 +5,7 @@
  *
  * Resizes a BMP by a factor of n on (0.0, 100.0).
  */
-       
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,13 +36,13 @@ int main(int argc, char* argv[])
     char* outfile = argv[3];
 
     // range check: n must be on (0.0, 100.0)
-    if (factor <= 0 || factor >= 100)
+    if (factor <= 0 || factor > 100)
     {
         printf("The resize factor, must satisfy 0 < n <= 100.\n");
         return 1;
     }
 
-    // open input file 
+    // open input file
     FILE* inptr = fopen(infile, "r");
     if (inptr == NULL)
     {
@@ -76,13 +76,13 @@ int main(int argc, char* argv[])
     }
 
     // width of original for future reference
-    int oldWidth  = bi.biWidth;
+    int oldWidth = bi.biWidth;
 
     // determine padding for scanlines of original
-    int oldPadding =  (4 - (oldWidth * sizeof(RGBTRIPLE)) % 4) % 4;
+    int oldPadding = (4 - (oldWidth * sizeof(RGBTRIPLE)) % 4) % 4;
 
     // update BITMAPINFOHEADER with dimensions after resize
-    bi.biWidth  *= factor;
+    bi.biWidth *= factor;
     bi.biHeight *= factor;
 
     // determine padding for scanlines of resized image
@@ -112,26 +112,25 @@ int main(int argc, char* argv[])
         // outfile row will draw from the pixels of one row
         // in the infile.  Find out what row that should be and
         // load it into currRow, if we haven't already.
-        int oldY = (int)(y / factor);
+        int oldY = y / factor;
 
-        // load rows from the input picture one by one until we
-        // get the correct one.
-        while (rowNum < oldY)
+        // if we don't already have the correct row loaded, then seek to the
+        // desired row and read it in to our buffer
+        if (rowNum != oldY)
         {
-            rowNum++;
-            for (int j = 0; j < oldWidth; j++)
-            {
-                fread(&currRow[j], sizeof(RGBTRIPLE), 1, inptr);
-            }
-
-            // skip over padding, if any
-            fseek(inptr, oldPadding, SEEK_CUR);
+            // we want to skip over the headers and oldY rows, where each row
+            // has oldWidth pixels and oldPadding bytes of padding
+            size_t pos = (sizeof(RGBTRIPLE) * oldWidth + oldPadding) * oldY +
+                         sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+            fseek(inptr, pos, SEEK_SET);
+            rowNum = oldY;
+            fread(&currRow, sizeof(RGBTRIPLE), oldWidth, inptr);
         }
 
         // Draw the pixels in that row into the output.
         for (int x = 0; x < bi.biWidth; x++)
         {
-            RGBTRIPLE triple = currRow[(int)(x / factor)];
+            RGBTRIPLE triple = currRow[(int) (x / factor)];
             fwrite(&triple, sizeof(RGBTRIPLE), 1, outptr);
         }
 
@@ -141,7 +140,7 @@ int main(int argc, char* argv[])
             fputc(0x00, outptr);
         }
     }
-    
+
     // close infile
     fclose(inptr);
 

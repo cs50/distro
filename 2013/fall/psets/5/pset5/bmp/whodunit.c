@@ -96,7 +96,9 @@ int main(int argc, char* argv[])
 
         // write padding to outfile
         for (int k = 0; k < padding; k++)
+        {
             fputc(0x00, outptr);
+        }
     }
 
     // close infile

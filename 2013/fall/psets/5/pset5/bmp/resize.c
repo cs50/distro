@@ -6,7 +6,7 @@
  *
  * Resizes a BMP by a factor of n on (0, 100].
  */
-       
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // open input file 
+    // open input file
     FILE* inptr = fopen(infile, "r");
     if (inptr == NULL)
     {
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
     int oldPadding =  (4 - (oldWidth * sizeof(RGBTRIPLE)) % 4) % 4;
 
     // update BITMAPINFOHEADER with dimensions after resize
-    bi.biWidth  *= n;
+    bi.biWidth *= n;
     bi.biHeight *= n;
 
     // determine padding for scanlines of resized image
@@ -115,18 +115,14 @@ int main(int argc, char* argv[])
         // array stores in memory all pixels in scanline
         RGBTRIPLE currRow[oldWidth];
 
-        // iterate over pixels in scanline
-        for (int j = 0; j < oldWidth; j++)
-        {
-            // read RGB triple from infile
-            fread(&currRow[j], sizeof(RGBTRIPLE), 1, inptr);
-        }
+        // read a scanline from the infile
+        fread(&currRow, sizeof(RGBTRIPLE), oldWidth, inptr);
 
         // write new RGB triples to outfile for next n scanlines
-        for (int k = 0; k < n; k ++)
+        for (int k = 0; k < n; k++)
         {
             for (int l = 0; l < oldWidth; l++)
-            {   
+            {
                 // apply old triple to next n pixels on scanline
                 for (int m = 0; m < n; m++)
                 {
@@ -144,7 +140,7 @@ int main(int argc, char* argv[])
         // skip over padding, if any
         fseek(inptr, oldPadding, SEEK_CUR);
     }
- 
+
     // close infile
     fclose(inptr);
 
