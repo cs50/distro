@@ -2,7 +2,7 @@
  * speller.c
  *
  * Computer Science 50
- * Problem Set 5
+ * Problem Set 6
  *
  * Implements a spell-checker.
  ***************************************************************************/
@@ -13,6 +13,7 @@
 #include <sys/time.h>
 
 #include "dictionary.h"
+#undef getrusage
 
 // default dictionary
 #define DICTIONARY "/home/cs50/pset5/dictionaries/large"

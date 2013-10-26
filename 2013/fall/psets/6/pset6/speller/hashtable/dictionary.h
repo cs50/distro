@@ -2,7 +2,7 @@
  * dictionary.h
  *
  * Computer Science 50
- * Problem Set 5
+ * Problem Set 6
  *
  * Declares a dictionary's functionality.
  ***************************************************************************/
