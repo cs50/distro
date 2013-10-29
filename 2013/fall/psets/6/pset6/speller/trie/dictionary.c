@@ -20,6 +20,7 @@
 
 #define ALPHABET 27
 
+// a node in a trie
 typedef struct node
 {
     bool word;
@@ -59,7 +60,7 @@ bool check(const char* word)
 
         // we go through the same structure as in load to check if
         // there is a letter in the trie that is the same
-        char c = (check == '\'') ? ALPHABET - 1 : check - 'a';
+        int c = (check == '\'') ? ALPHABET - 1 : check - 'a';
 
         // check if node exists and if not then this is not a word,
         // so return false
