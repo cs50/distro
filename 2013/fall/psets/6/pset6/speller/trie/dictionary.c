@@ -4,133 +4,206 @@
  * Computer Science 50
  * Problem Set 6
  *
- * David J. Malan
+ * Armaghan Behlum
+ * Rob Bowden
  *
  * Implements a dictionary's functionality.
  ***************************************************************************/
 
 #include <ctype.h>
-#include <fcntl.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <string.h>
 
 #include "dictionary.h"
 
-// root of a trie
-static struct node *root;
+#define ALPHABET 27
 
-// number of words in trie
-static unsigned int count;
+typedef struct node
+{
+    bool word;
+    struct node* children[ALPHABET];
+}
+node;
 
+// set up recursive function for unload
+void unloader(node* current);
 
-/*
- * bool
- * check(const char *word)
- *
+// root of our dictionary trie
+node* root;
+
+// initialize size of dictionary to make counting easier later
+unsigned int dictionary_size = 0;
+
+/**
  * Returns true if word is in dictionary else false.
  */
-
-bool 
-check(const char *word)
+bool check(const char* word)
 {
-    register struct node *current = root;
-    const register char *w = word;
-    while (*w != '\0')
+    // find the length of the word, which is useful for conversion and checking
+    int n = strlen(word);
+
+    // set up something to hold the lowercased letters since we may need to change them
+    char check;
+
+    // make cursor to go through dictionary
+    node* cursor = root;
+
+    // go through each letter of word, make sure it's lower case, make sure it's
+    // part of a trie, and check if the end is a word
+    for (int i = 0; i < n; i++)
     {
-        register unsigned int index = (*w == '\'') ? 26 : (*w | 32) - 'a';
-        current = current->array[index];
-        if (current == NULL) return false;
-        w++;
+        // lower case what we got
+        check = tolower(word[i]);
+
+        // we go through the same structure as in load to check if
+        // there is a letter in the trie that is the same
+        char c = (check == '\'') ? ALPHABET - 1 : check - 'a';
+
+        // check if node exists and if not then this is not a word,
+        // so return false
+        if (cursor->children[c] == NULL)
+        {
+            return false;
+        }
+
+        // if node existed, go to it
+        else
+        {
+            cursor = cursor->children[c];
+        }
     }
-    return current->stop;
+
+    // if we managed to get through the whole word, return the word
+    // at this node
+    return cursor->word;
 }
 
-
-bool 
-load(const char *dictionary)
+/**
+ * Loads dictionary into memory.  Returns true if successful else false.
+ */
+bool load(const char* dictionary)
 {
-    // pre-allocate nodes
-    struct stat buf;
-    if (stat(dictionary, &buf)) return false;
+    // open dictionary we got from speller.c
+    FILE* file = fopen(dictionary, "r");
 
-    // allocate root
-    root = calloc(1, sizeof(struct node));
-    if (root == NULL) return false;
-
-    // map file into memory
-    int fd = open(dictionary, O_RDONLY);
-    if (fd < 0) return false;
-    char *map = mmap(0, buf.st_size, PROT_READ, MAP_SHARED, fd, 0);
-    if (map == MAP_FAILED) return false;
-
-    // add words to trie
-    for (register char *c = map, *eof = c + buf.st_size; c < eof; c++)
+    // check if dictionary opened
+    if (file == NULL)
     {
-        register struct node *current = root;
-        while (*c != '\n')
-        {
-            register unsigned int index = (*c == '\'') ? 26 : *c - 'a';
-            if (current->array[index] == NULL && ((current->array[index] = calloc(1, sizeof(struct node))) == NULL)) return false;
-            current = current->array[index];
-            c++;
-        }
-        current->stop = true;
-        count++;
+        return false;
     }
 
-    // close file
-    close(fd);
+    // make root for the dictionary
+    root = malloc(sizeof(node));
+    if (root == NULL)
+    {
+        fclose(file);
+        return false;
+    }
 
-    // that's all folks
+    // initialize bool of the root node to avoid memory leak errors
+    root->word = false;
+
+    // initialize children of the root
+    for (int i = 0; i < ALPHABET; i++)
+    {
+        root->children[i] = NULL;
+    }
+
+    // points cursor at the root
+    node* cursor = root;
+
+    // loop through dictionary making the trie
+    for (int c = fgetc(file); c != EOF; c = fgetc(file))
+    {
+        if (c != '\n')
+        {
+            // change letters to their corresponding numbers,
+            // starting from a = 0, special casing apostrophe as 26
+            int index = (c == '\'') ? ALPHABET - 1 : c - 'a';
+
+            // check if node exists and if not then make it and go to it
+            if (cursor->children[index] == NULL)
+            {
+                // make node
+                cursor->children[index] = calloc(1, sizeof(node));
+                if (cursor->children[index] == NULL)
+                {
+                    unload();
+                    fclose(file);
+                    return false;
+                }
+            }
+
+            // go to node, which may have just been made
+            cursor = cursor->children[index];
+        }
+        else
+        {
+            // if we are at the end of the word, mark it as being a word
+            cursor->word = true;
+
+            // return to the root of the dictionary trie
+            cursor = root;
+
+            // increment our count of the dictionary size
+            dictionary_size++;
+        }
+    }
+
+    // fail if we encountered errors in reading
+    if (ferror(file))
+    {
+        unload();
+        fclose(file);
+        return false;
+    }
+
+    // close our dictionary when done
+    fclose(file);
+
     return true;
 }
 
-
-
-
-/*
- * unsigned int
- * size()
- *
+/**
  * Returns number of words in dictionary if loaded else 0 if not yet loaded.
  */
-
-unsigned int 
-size(void)
+unsigned int size(void)
 {
-    return count;
+    // counting was done when the dictionary was made.
+    return dictionary_size;
 }
 
-
-/*
- * bool
- * unload()
- *
+/**
  * Unloads dictionary from memory.  Returns true if successful else false.
  */
-
-void
-unloader(struct node *n)
+bool unload(void)
 {
-    if (n != NULL)
-    {
-        for (int i = 0; i < CHARS; i++)
-        {
-            unloader(n->array[i]);
-            if (n->array[i] != NULL)
-                free(n->array[i]);
-        }
-    }
+    // enter recursive function
+    unloader(root);
+
+    // return when we are successful
+    return true;
 }
 
-bool
-unload(void)
+/*
+ * checks if we're at the bottom of the trie and if so starts to free malloced
+ * memory
+ */
+void unloader(node* current)
 {
-    unloader(root);
-    free(root);
-    return true;
+    // iterate over all the children to see if they point to anything and go
+    // there if they do point
+    for (int i = 0; i < ALPHABET; i++)
+    {
+        if (current->children[i] != NULL)
+        {
+            unloader(current->children[i]);
+        }
+    }
+
+    // after we check all the children point to null we can get rid of the node
+    // and return to the previous iteration of this function.
+    free(current);
 }
