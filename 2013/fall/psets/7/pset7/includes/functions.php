@@ -37,7 +37,7 @@
     function logout()
     {
         // unset any session variables
-        $_SESSION = array();
+        $_SESSION = [];
 
         // expire cookie
         if (!empty($_COOKIE[session_name()]))
