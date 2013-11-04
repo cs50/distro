@@ -42,29 +42,20 @@ unsigned int dictionary_size = 0;
  */
 bool check(const char* word)
 {
-    // find the length of the word, which is useful for conversion and checking
-    int n = strlen(word);
-
-    // set up something to hold the lowercased letters since we may need to change them
-    char check;
-
-    // make cursor to go through dictionary
+    // make cursor to go through trie
     node* cursor = root;
 
     // go through each letter of word, make sure it's lower case, make sure it's
     // part of a trie, and check if the end is a word
-    for (int i = 0; i < n; i++)
+    for (int i = 0, n = strlen(word); i < n; i++)
     {
-        // lower case what we got
-        check = tolower(word[i]);
-
-        // we go through the same structure as in load to check if
-        // there is a letter in the trie that is the same
-        int c = (check == '\'') ? ALPHABET - 1 : check - 'a';
+        // similar to load, figure out where we should index
+        // into the trie based on word[i]
+        int index = (word[i] == '\'') ? ALPHABET - 1 : tolower(word[i]) - 'a';
 
         // check if node exists and if not then this is not a word,
         // so return false
-        if (cursor->children[c] == NULL)
+        if (cursor->children[index] == NULL)
         {
             return false;
         }
@@ -72,12 +63,12 @@ bool check(const char* word)
         // if node existed, go to it
         else
         {
-            cursor = cursor->children[c];
+            cursor = cursor->children[index];
         }
     }
 
-    // if we managed to get through the whole word, return the word
-    // at this node
+    // if we managed to get through the whole word, return whether this node
+    // represents an actual word
     return cursor->word;
 }
 
@@ -96,20 +87,11 @@ bool load(const char* dictionary)
     }
 
     // make root for the dictionary
-    root = malloc(sizeof(node));
+    root = calloc(1, sizeof(node));
     if (root == NULL)
     {
         fclose(file);
         return false;
-    }
-
-    // initialize bool of the root node to avoid memory leak errors
-    root->word = false;
-
-    // initialize children of the root
-    for (int i = 0; i < ALPHABET; i++)
-    {
-        root->children[i] = NULL;
     }
 
     // points cursor at the root
@@ -181,10 +163,9 @@ unsigned int size(void)
  */
 bool unload(void)
 {
-    // enter recursive function
+    // the recursive function handles all of the freeing
     unloader(root);
 
-    // return when we are successful
     return true;
 }
 

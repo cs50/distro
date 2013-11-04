@@ -3,7 +3,7 @@
  *
  * Nate Hardison <nate@cs.harvard.edu>
  *
- * Implements a dictionary's functionality, using a hash table for the 
+ * Implements a dictionary's functionality, using a hash table for the
  * dictionary.
  ***************************************************************************/
 
@@ -21,24 +21,6 @@
 /**
  * Each node will store the word and a pointer to the next node with the
  * same hash value (or NULL, if no such node follows).
- *
- * To be more memory-efficient, we don't need to allocate a fixed-length
- * char array like below. Instead, we can use a zero-length char array
- * and allocate nodes of just the right size.
- *
- * typedef struct node
- * {
- *     struct node* next;
- *     char word[];
- * }
- * node;
- *
- * char* word = "CS50 rocks!";
- * node* entry = malloc(sizeof(node) + strlen(word) + 1);
- * strcpy(entry->word, word);
- *
- * This requires that we use a separate buffer for reading chars in from
- * the file and then copy the contents of the buffer into the node struct.
  */
 typedef struct node
 {
@@ -62,14 +44,14 @@ unsigned int hashtable_size = 0;
  * Hash function adapted from:
  *     http://stackoverflow.com/questions/98153/#98179
  */
-static int hash_word(const char* word)
+unsigned int hash_word(const char* word)
 {
     /* magic numbers from http://www.isthe.com/chongo/tech/comp/fnv/ */
-    size_t InitialFNV = 2166136261U;
-    size_t FNVMultiple = 16777619;
-    
+    unsigned int InitialFNV = 2166136261U;
+    unsigned int FNVMultiple = 16777619;
+
     /* Fowler / Noll / Vo (FNV) Hash */
-    size_t hash = InitialFNV;
+    unsigned int hash = InitialFNV;
     for (int i = 0; word[i] != '\0'; i++)
     {
         // xor the low 8 bits of the hash
@@ -85,7 +67,7 @@ static int hash_word(const char* word)
  * Returns true if word is in dictionary else false.
  */
 bool check(const char* word)
-{   
+{
     // find the bucket in the table where the word should be
     node* bucket = hashtable[hash_word(word)];
 
@@ -111,7 +93,7 @@ bool load(const char* dictionary)
     {
         return false;
     }
-    
+
     // loop through file, entering each word in our hash table
     while (true)
     {
@@ -138,7 +120,7 @@ bool load(const char* dictionary)
         // prepend the entry to the bucket
         entry->next = hashtable[hash];
         hashtable[hash] = entry;
-        
+
         hashtable_size++;
     }
 
@@ -149,7 +131,7 @@ bool load(const char* dictionary)
         fclose(dictionary_file);
         return false;
     }
-    
+
     fclose(dictionary_file);
     return true;
 }
