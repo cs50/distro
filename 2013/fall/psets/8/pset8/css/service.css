@@ -92,3 +92,8 @@ body
     margin-right: -100%;
     width: 320px;
 }
+
+#teleport
+{
+    text-align: center
+}

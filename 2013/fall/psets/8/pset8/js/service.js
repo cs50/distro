@@ -34,6 +34,13 @@ var earth = null;
 // global reference to geocoding service
 var geocoder = null;
 
+// the Konami code: up, up, down, down, left, right, left, right, b, a
+var konami_code = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
+
+var konami_entered = false;
+
+var konami_index = 0;
+
 // global reference to 2D map
 var map = null;
 
@@ -70,6 +77,21 @@ $(window).load(function() {
     // listen for click on Pick Up button
     $("#pickup").click(function(event) {
         pickup();
+    });
+
+    // listen for click on Teleport button
+    $("#teleport-btn").click(function(event) {
+        var address = $("#address").val();
+        teleport(address);
+    });
+
+    // prevent the shuttle from intercepting text entered into the input box
+    $("#address").keydown(function(event) {
+        event.stopPropagation();
+    });
+
+    $("#address").keyup(function(event) {
+        event.stopPropagation();
     });
 
     // load application
@@ -155,7 +177,7 @@ function dropoff()
 /**
  * Called if Google Earth fails to load.
  */
-function failureCB(errorCode) 
+function failureCB(errorCode)
 {
     // report error unless plugin simply isn't installed
     if (errorCode != ERR_CREATE_PLUGIN)
@@ -167,7 +189,7 @@ function failureCB(errorCode)
 /**
  * Handler for Earth's frameend event.
  */
-function frameend() 
+function frameend()
 {
     shuttle.update();
 }
@@ -175,7 +197,7 @@ function frameend()
 /**
  * Called once Google Earth has loaded.
  */
-function initCB(instance) 
+function initCB(instance)
 {
     // retain reference to GEPlugin instance
     earth = instance;
@@ -236,6 +258,22 @@ function keystroke(event, state)
         event = window.event;
     }
 
+    if (!konami_entered && !state)
+    {
+        if (event.keyCode == konami_code[konami_index])
+        {
+            konami_index++;
+            if (konami_index == konami_code.length)
+            {
+                konami_entered = true;
+            }
+        }
+        else
+        {
+            konami_index = 0;
+        }
+    }
+
     // left arrow
     if (event.keyCode == 37)
     {
@@ -271,41 +309,64 @@ function keystroke(event, state)
         return false;
     }
 
-    // C, c
-    else if (event.keyCode == 67 || event.keyCode == 99)
-    {
-        shuttle.states.flyingDownward = state;
-        return false;
-    }
-
     // D, d
     else if (event.keyCode == 68 || event.keyCode == 100)
     {
         shuttle.states.slidingRightward = state;
         return false;
     }
- 
-    // E, e
-    if (event.keyCode == 69 || event.keyCode == 101)
-    {
-        shuttle.states.flyingUpward = state;
-        return false;
-    }
- 
+
     // S, s
     else if (event.keyCode == 83 || event.keyCode == 115)
     {
-        shuttle.states.movingBackward = state;     
+        shuttle.states.movingBackward = state;
         return false;
     }
 
     // W, w
     else if (event.keyCode == 87 || event.keyCode == 119)
     {
-        shuttle.states.movingForward = state;    
+        shuttle.states.movingForward = state;
         return false;
     }
-  
+
+    // X, x (speed up)
+    else if (event.keyCode == 88 || event.keyCode == 120)
+    {
+        if (shuttle.velocity < 150)
+        {
+            shuttle.velocity += 5;
+        }
+        return false;
+    }
+
+    // Z, z (slow down)
+    else if (event.keyCode == 90  || event.keyCode == 122)
+    {
+        if (shuttle.velocity > 5)
+        {
+            shuttle.velocity -= 5;
+        }
+        return false;
+    }
+
+    else if (konami_entered)
+    {
+        // C, c (fly down)
+        if (event.keyCode == 67 || event.keyCode == 99)
+        {
+            shuttle.states.flyingDownward = state;
+            return false;
+        }
+
+        // E, e (fly up)
+        if (event.keyCode == 69 || event.keyCode == 101)
+        {
+            shuttle.states.flyingUpward = state;
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -351,48 +412,58 @@ function pickup()
     for (var i = 0; i < passengers.length; i++)
     {
         // check if passenger is waiting for pickup
-        if (passengers[i].placemark)
+        if (!passengers[i].placemark)
         {
-            // get passenger's position
-            var lat = passengers[i].placemark.getGeometry().getLatitude();
-            var lng = passengers[i].placemark.getGeometry().getLongitude();
+            continue;
+        }
 
-            // check distance between shuttle and passenger
-            if (shuttle.distance(lat, lng) <= 15.0)
+        // check if passenger isn't in one of the houses
+        if (!HOUSES[passengers[i].house])
+        {
+            continue;
+        }
+
+        // get passenger's position
+        var lat = passengers[i].placemark.getGeometry().getLatitude();
+        var lng = passengers[i].placemark.getGeometry().getLongitude();
+
+        // check distance between shuttle and passenger
+        if (shuttle.distance(lat, lng) <= 15.0)
+        {
+            // try to seat passenger
+            var seated = false;
+            for (var j = 0; j < shuttle.seats.length; j++)
             {
-                // try to seat passenger
-                var seated = false;
-                for (var j = 0; j < shuttle.seats.length; j++)
+                // check for empty seat
+                if (shuttle.seats[j] == null)
                 {
-                    // check for empty seat
-                    if (shuttle.seats[j] == null)
-                    {
-                        // seat passenger
-                        shuttle.seats[j] = {
-                         name: passengers[i].name,
-                         house: passengers[i].house
-                        };
+                    // seat passenger
+                    shuttle.seats[j] = {
+                        name: passengers[i].name,
+                        house: passengers[i].house
+                    };
 
-                        // remember pick-up
-                        picked++;
-                        seated = true;
+                    // remember pick-up
+                    picked++;
+                    seated = true;
 
-                        // remove placemark from Earth
-                        features.removeChild(passengers[i].placemark);
-                        passengers[i].placemark = null;
+                    // remove placemark from Earth
+                    features.removeChild(passengers[i].placemark);
+                    passengers[i].placemark = null;
 
-                        // remove marker from map
-                        passengers[i].marker.setMap(null);
-                        passengers[i].marker = null;
+                    // remove marker from map
+                    passengers[i].marker.setMap(null);
+                    passengers[i].marker = null;
 
-                        // seated!
-                        break;
-                    }
+                    // seated!
+                    break;
                 }
-                if (!seated)
-                {
-                    announce("out of seats!");
-                }
+            }
+            if (!seated)
+            {
+                announce("out of seats!");
+                chart();
+                return;
             }
         }
     }
@@ -480,8 +551,7 @@ function populate()
             marker: marker,
             house: PASSENGERS[i].house,
             name: PASSENGERS[i].name,
-            placemark: placemark,
-            seated: false
+            placemark: placemark
         });
     }
 }
@@ -503,16 +573,16 @@ function teleport(address)
             map.setCenter(result[0].geometry.location);
             bus.setPosition(result[0].geometry.location);
 
-            // update Earth
-            shuttle = new Shuttle({
-                heading: HEADING,
-                height: HEIGHT,
-                latitude: result[0].geometry.location.hb,
-                longitude: result[0].geometry.location.ib,
-                planet: earth,
-                seats: SEATS,
-                velocity: VELOCITY
-            });
+            // update shuttle metadata
+            shuttle.position.latitude = result[0].geometry.location.mb;
+            shuttle.position.longitude = result[0].geometry.location.nb;
+            shuttle.localAnchorCartesian = V3.latLonAltToCartesian([
+                shuttle.position.latitude,
+                shuttle.position.longitude,
+                shuttle.position.altitude
+            ]);
+
+            // refresh camera
             shuttle.updateCamera();
         }
     });
@@ -521,7 +591,7 @@ function teleport(address)
 /**
  * Handler for Earth's viewchange event.
  */
-function viewchange() 
+function viewchange()
 {
     // keep map centered on shuttle's marker
     var latlng = new google.maps.LatLng(shuttle.position.latitude, shuttle.position.longitude);
