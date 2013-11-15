@@ -529,7 +529,7 @@ function viewchange()
     bus.setPosition(latlng);
 
     // clear any announcements
-    announce(false);
+    announce();
 }
 
 /**
