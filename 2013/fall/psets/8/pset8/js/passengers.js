@@ -211,7 +211,7 @@ var PASSENGERS = [
     {
         username: "jpochtar",
         name: "Jared Pochtar",
-        house: "Thayer Hall"
+        house: "Wigglesworth Hall"
     },
     {
         username: "jsalazar01",

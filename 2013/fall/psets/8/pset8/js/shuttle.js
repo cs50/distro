@@ -48,7 +48,7 @@ function Shuttle(config)
     this.cameraAltitude = this.height;
 
     // shuttle's initial Cartesian coordinates
-    this.localAnchorCartesian = 
+    this.localAnchorCartesian =
         V3.latLonAltToCartesian([this.position.latitude, this.position.longitude, this.position.altitude]);
 
     // heading angle and tilt angle are relative to local frame
@@ -56,8 +56,8 @@ function Shuttle(config)
     this.tiltAngle = 0;
 
     // initialize time
-    this.lastMillis = (new Date()).getTime();  
-  
+    this.lastMillis = (new Date()).getTime();
+
     // used for bounce
     this.distanceTraveled = 0;
 
@@ -92,20 +92,20 @@ Shuttle.prototype.distance = function(lat, lng)
 Shuttle.prototype.update = function()
 {
     this.planet.getWindow().blur();
-  
+
     // Update delta time (dt in seconds)
-    var now = (new Date()).getTime();  
+    var now = (new Date()).getTime();
     var dt = (now - this.lastMillis) / 1000.0;
     if (dt > 0.25)
     {
         dt = 0.25;
-    }  
-    this.lastMillis = now;    
-    
+    }
+    this.lastMillis = now;
+
     // Update orientation and then position of camera based on user input.
     this.updateOrientation(dt);
     this.updatePosition(dt);
-           
+
     // Update camera.
     this.updateCamera();
 };
@@ -113,18 +113,18 @@ Shuttle.prototype.update = function()
 /**
  * Method that updates a shuttle's camera.
  */
-Shuttle.prototype.updateCamera = function() 
+Shuttle.prototype.updateCamera = function()
 {
     // Will put in a bit of a stride if the camera is at or below 1.7 meters
-    var bounce = 0;  
+    var bounce = 0;
     if (this.cameraAltitude <= this.height)
     {
-        bounce = 1.5 * Math.abs(Math.sin(4 * this.distanceTraveled * Math.PI / 180)); 
+        bounce = 1.5 * Math.abs(Math.sin(4 * this.distanceTraveled * Math.PI / 180));
     }
 
     // calculate heading; keep angle in [-180, 180]
     var heading = this.headingAngle * 180 / Math.PI;
-    while (heading < -180) 
+    while (heading < -180)
     {
         heading += 360;
     }
@@ -144,14 +144,14 @@ Shuttle.prototype.updateCamera = function()
         heading,
         this.tiltAngle * 180 / Math.PI + 120, /* tilt */
         0 /* altitude is constant */
-    );  
-    this.planet.getView().setAbstractView(la);         
+    );
+    this.planet.getView().setAbstractView(la);
 };
 
 /**
  * Method that updates a shuttle's orientation.
  */
-Shuttle.prototype.updateOrientation = function(dt) 
+Shuttle.prototype.updateOrientation = function(dt)
 {
     // Based on dt and input press, update turn angle.
     if (this.states.turningLeftward || this.states.turningRightward)
@@ -189,31 +189,31 @@ Shuttle.prototype.updateOrientation = function(dt)
 /**
  * Method that updates a shuttle's position.
  */
-Shuttle.prototype.updatePosition = function(dt) 
+Shuttle.prototype.updatePosition = function(dt)
 {
-    // Convert local lat/lon to a global matrix.  The up vector is 
+    // Convert local lat/lon to a global matrix.  The up vector is
     // vector = position - center of earth.  And the right vector is a vector
     // pointing eastwards and the facing vector is pointing towards north.
     var localToGlobalFrame = M33.makeLocalToGlobalFrame([this.position.latitude, this.position.longitude, this.position.altitude]);
-  
+
     // Move in heading direction by rotating the facing vector around
     // the up vector, in the angle specified by the heading angle.
     // Strafing is similar, except it's aligned towards the right vec.
-    var headingVec = V3.rotate(localToGlobalFrame[1], localToGlobalFrame[2], -this.headingAngle);                             
+    var headingVec = V3.rotate(localToGlobalFrame[1], localToGlobalFrame[2], -this.headingAngle);
     var rightVec = V3.rotate(localToGlobalFrame[0], localToGlobalFrame[2], -this.headingAngle);
 
-    // Calculate strafe/forwards                             
-    var strafe = 0;                             
-    if (this.states.slidingLeftward || this.states.slidingRightward) 
+    // Calculate strafe/forwards
+    var strafe = 0;
+    if (this.states.slidingLeftward || this.states.slidingRightward)
     {
         var strafeVelocity = this.velocity / 2;
         if (this.states.slidingLeftward)
         {
-            strafeVelocity *= -1;      
+            strafeVelocity *= -1;
         }
         strafe = strafeVelocity * dt;
-    }  
-    var forward = 0;                             
+    }
+    var forward = 0;
     if (this.states.movingForward || this.states.movingBackward)
     {
         var forwardVelocity = this.velocity;
@@ -222,24 +222,24 @@ Shuttle.prototype.updatePosition = function(dt)
             forwardVelocity *= -1;
         }
         forward = forwardVelocity * dt;
-    }  
-    if (this.states.flyingUpward) 
+    }
+    if (this.states.flyingUpward)
     {
         this.cameraAltitude += 1.0;
     }
-    else if (this.states.flyingDownward) 
+    else if (this.states.flyingDownward)
     {
         this.cameraAltitude -= 1.0;
     }
     this.cameraAltitude = Math.max(this.height, this.cameraAltitude);
-  
+
     // remember distance traveled
     this.distanceTraveled += forward;
 
     // Add the change in position due to forward velocity and strafe velocity.
     this.localAnchorCartesian = V3.add(this.localAnchorCartesian, V3.scale(rightVec, strafe));
     this.localAnchorCartesian = V3.add(this.localAnchorCartesian, V3.scale(headingVec, forward));
-                                                                        
+
     // Convert cartesian to Lat Lon Altitude for camera setup later on.
     var localAnchorLla = V3.cartesianToLatLonAlt(this.localAnchorCartesian);
     this.position.latitude = localAnchorLla[0];
