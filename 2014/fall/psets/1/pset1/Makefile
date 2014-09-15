@@ -1,4 +1,4 @@
-TARGETS = greedy greedy_2 mario
+TARGETS = greedy-v1 greedy-v2 mario
 
 default: $(TARGETS)
 
