@@ -11,45 +11,44 @@
  * where n is number of pseudorandom numbers to print
  * and s is an optional seed
  ***************************************************************************/
-
+ 
+// standard libraries
+#define _XOPEN_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-#include "helpers.h"
-
+// constant
 #define LIMIT 65536
 
-int main(int argc, string argv[])
+int main(int argc, char *argv[])
 {
-    // quits program and displays usage if the number of random numbers to
-    // generate and an optional seed were not entered at the command line
+    // ensure proper usage
     if (argc != 2 && argc != 3)
     {
         printf("Usage: generate n [s]\n");
         return 1;
     }
 
-    // Converts desired number of random numbers from a string to an int
+    // convert command-line argument from string to integer
     int n = atoi(argv[1]);
 
-    // if a seed was entered at the command line, use that for srand, else
-    // just time(NULL)
+    // seed pseudorandom-number generator
     if (argc == 3)
     {
-        srand((unsigned int) atoi(argv[2]));
+        srand48((unsigned int) atoi(argv[2]));
     }
     else
     {
-        srand((unsigned int) time(NULL));
+        srand48((unsigned int) time(NULL));
     }
 
-    // prints the desired number of random numbers, all 0 <= and < LIMIT
+    // generate pseudorandom integers, one per line
     for (int i = 0; i < n; i++)
     {
-        printf("%d\n", rand() % LIMIT);
+        printf("%i\n", (int) (drand48() * LIMIT));
     }
 
-    // that's all folks
+    // success
     return 0;
 }
