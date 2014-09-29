@@ -2,11 +2,12 @@
 // breakout.c
 //
 // Computer Science 50
-// Problem Set 4
+// Problem Set 3
 //
 
 // standard libraries
 #define _XOPEN_SOURCE
+#include <cs50.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,7 +59,7 @@
 // how many milliseconds to wait after ball's been lost
 #define LIFETIME 500
 
-// determines what special modes are on
+// special modes
 #define SPEED_UP true
 #define PADDLE_SHRINK true 
 #define LASERS true
@@ -85,9 +86,9 @@ GObject detectCollision(GWindow window, GObject ball);
 GObject detectLaserCollision(GWindow window, GObject laser);
 GLabel initPoints(GWindow window);
 void updatePoints(GWindow window, GLabel label, int points);
-char* getRandomColor();
+string getRandomColor();
 
-int main(int argc, char* argv[])
+int main(int argc, string argv[])
 {
     // check for GOD mode
     bool god = false;
@@ -136,6 +137,7 @@ int main(int argc, char* argv[])
     int tempVelocityX;
     
     // used to store our ever-changing laser color
+    // TODO: mention why 18 (or change to a constant if appropriate)
     char color[18];
 
     // keep playing until game over
@@ -173,10 +175,9 @@ int main(int argc, char* argv[])
             {
                 // check for mouse event
                 GEvent e = getNextEvent(MOUSE_EVENT + KEY_EVENT);
-                
-                // if the event was movement
                 if (e != NULL)
                 {
+                    // if the event was movement
                     if (getEventType(e) == MOUSE_MOVED)
                     {
                         // keep paddle centered with cursor, unless at edge
@@ -191,17 +192,24 @@ int main(int argc, char* argv[])
                         }
                         setLocation(paddle, px, getY(paddle));
                     }
+
+                    // if the event was a click
                     else if (LASERS && getEventType(e) == MOUSE_CLICKED)
                     {
                         // only fire if laser isn't already active
                         if (!laserActive)
                         {
+                            // flag laser as active
                             laserActive = true;
+
+                            // TODO: explain
                             laserVY = -4.0;
                             
                             // set our location just above the center of the paddle
                             setLocation(laser, getX(paddle) + paddle_width / 2, 
                                 HEIGHT - LASER_HEIGHT - MARGIN - PADDLE_HEIGHT - 5);
+
+                            // change laser's color
                             setColor(laser, getRandomColor(color));
                         }
                     }
@@ -229,15 +237,19 @@ int main(int argc, char* argv[])
                 setLocation(paddle, x, getY(paddle));
             }
             
-            // randomize our laser color for flashiness if active and update pos
+            // update laser, if active
             if (laserActive)
             {
+                // randomize laser's color
                 setColor(laser, getRandomColor(color));
+
+                // TODO: explain
                 move(laser, 0, laserVY);
                 
                 // check for top-screen collision
                 if (getY(laser) <= 0)
                 {
+                    // TODO: explain
                     laserActive = false;
                     setLocation(laser, -20, HEIGHT);
                 }   
@@ -269,9 +281,10 @@ int main(int argc, char* argv[])
             GObject object = detectCollision(window, ball);
             if (object != NULL)
             {
-                // if ball's collided with paddle, bounce
+                // if ball's collided with paddle
                 if (object == paddle)
                 {
+                    // bounce
                     vy = -vy;
                     
                     //
@@ -308,10 +321,14 @@ int main(int argc, char* argv[])
                             vx = -tempVelocityX;
                         }
                     }
+
+                    // TODO: explain
                     else if ((getX(ball) + RADIUS) > getX(paddle) + paddle_width / 2)
                     {
+                        // TODO: explain
                         edgeDelta = (getX(ball) + RADIUS) - (getX(paddle) + paddle_width / 2);
                         
+                        // TODO: explain
                         if (edgeDelta < 10)
                         {
                             tempVelocityX = 1;
@@ -329,17 +346,21 @@ int main(int argc, char* argv[])
                             tempVelocityX = 4;
                         }
                         
+                        // TODO: explain
                         if (vx < 0)
                         {
                             vx = tempVelocityX;
                         }
                     }
                     
+                    // TODO: explain
                     setLocation(ball, getX(ball), getY(paddle) - (2 * RADIUS));
                 }
+
                 // if ball has collided with laser
                 else if (object == laser)
                 {
+                    // TODO: explain
                     setLocation(laser, -20, HEIGHT);
                     setLocation(ball, getX(ball), HEIGHT - 2 * RADIUS);
                     laserActive = false;
@@ -357,7 +378,7 @@ int main(int argc, char* argv[])
                     if (VARIABLE_SCORING)
                     {
                         points += (((BRICK_HEIGHT + GAP) * ROWS 
-                               + MARGIN) - getY(object)) / GAP;
+                            + MARGIN) - getY(object)) / GAP;
                     }
                     else
                     {
@@ -677,14 +698,16 @@ void updatePoints(GWindow window, GLabel label, int points)
 
 /**
  * Builds a random color from RGB constituents and passes it in
- * hex format to a char array that is returned.
+ * hex format via a char array that is returned.
  */
-char *getRandomColor(char *buf)
+string getRandomColor(string buf)
 {
+    // generate a pseudorandom RGB triple
     unsigned red = rand() % 255;
     unsigned green = rand() % 255;
     unsigned blue = rand() % 255;
     
+    // return hexadecimal color code
     sprintf(buf, "#%02x%02x%02x", red, green, blue);
     return buf;
 }
