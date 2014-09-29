@@ -11,15 +11,18 @@
  * where n is number of pseudorandom numbers to print
  * and s is an optional seed
  ***************************************************************************/
-       
+ 
+// standard libraries
+#define _XOPEN_SOURCE
+#include <cs50.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
+// constant
 #define LIMIT 65536
 
-int
-main(int argc, char *argv[])
+int main(int argc, string argv[])
 {
     // ensure proper usage
     if (argc != 2 && argc != 3)
@@ -33,11 +36,20 @@ main(int argc, char *argv[])
 
     // seed pseudorandom-number generator
     if (argc == 3)
-        srand((unsigned int) atoi(argv[2]));
+    {
+        srand48((long int) atoi(argv[2]));
+    }
     else
-        srand((unsigned int) time(NULL));
+    {
+        srand48((long int) time(NULL));
+    }
 
     // generate pseudorandom integers, one per line
     for (int i = 0; i < n; i++)
-        printf("%d\n", rand() % LIMIT);
+    {
+        printf("%i\n", (int) (drand48() * LIMIT));
+    }
+
+    // success
+    return 0;
 }

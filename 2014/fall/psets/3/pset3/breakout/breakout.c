@@ -64,7 +64,6 @@ GObject detectCollision(GWindow window, GOval ball);
 
 int main(int argc, char* argv[])
 {
-
     // seed pseudorandom number generator
     srand48(time(NULL));
 
