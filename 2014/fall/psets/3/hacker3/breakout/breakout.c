@@ -137,8 +137,8 @@ int main(int argc, string argv[])
     int tempVelocityX;
     
     // used to store our ever-changing laser color
-    // TODO: mention why 18 (or change to a constant if appropriate)
-    char color[18];
+    // array used to hold an RGB triple (each of which is of type unsigned int)
+    char color[3 * sizeof(unsigned int)];
 
     // keep playing until game over
     while (lives > 0 && bricks > 0)
@@ -161,8 +161,8 @@ int main(int argc, string argv[])
         // vertical velocity of ball
         double vy = 3.0;
         
-        // vertical velocity of laser (initialized at 0 until fired)
-        double laserVY = 0.0;
+        // vertical velocity of laser
+        double laserVY = -4.0;
         
         // whether or not the laser is "active" (i.e., fired)
         bool laserActive = false;
@@ -202,9 +202,6 @@ int main(int argc, string argv[])
                             // flag laser as active
                             laserActive = true;
 
-                            // TODO: explain
-                            laserVY = -4.0;
-                            
                             // set our location just above the center of the paddle
                             setLocation(laser, getX(paddle) + paddle_width / 2, 
                                 HEIGHT - LASER_HEIGHT - MARGIN - PADDLE_HEIGHT - 5);
@@ -243,13 +240,13 @@ int main(int argc, string argv[])
                 // randomize laser's color
                 setColor(laser, getRandomColor(color));
 
-                // TODO: explain
+                // move laser
                 move(laser, 0, laserVY);
                 
                 // check for top-screen collision
                 if (getY(laser) <= 0)
                 {
-                    // TODO: explain
+                    // deactivates laser and resets its position
                     laserActive = false;
                     setLocation(laser, -20, HEIGHT);
                 }   
@@ -295,7 +292,8 @@ int main(int argc, string argv[])
                     if ((getX(ball) + RADIUS) < getX(paddle) + paddle_width / 2)
                     {
                         // get the distance between the paddle center and ball center
-                        edgeDelta = (getX(paddle) + paddle_width / 2) - (getX(ball) + RADIUS);
+                        edgeDelta = (getX(paddle) + paddle_width / 2) 
+                            - (getX(ball) + RADIUS);
                         
                         // the farther away, the steeper the angle
                         if (edgeDelta < 10)
@@ -322,13 +320,13 @@ int main(int argc, string argv[])
                         }
                     }
 
-                    // TODO: explain
+                    // right of center of paddler case 
                     else if ((getX(ball) + RADIUS) > getX(paddle) + paddle_width / 2)
                     {
-                        // TODO: explain
+                        // get distance between ball and paddle
                         edgeDelta = (getX(ball) + RADIUS) - (getX(paddle) + paddle_width / 2);
                         
-                        // TODO: explain
+                        // the farther away, the steeper the angle
                         if (edgeDelta < 10)
                         {
                             tempVelocityX = 1;
@@ -346,21 +344,21 @@ int main(int argc, string argv[])
                             tempVelocityX = 4;
                         }
                         
-                        // TODO: explain
+                        // flip velocity if coming from right
                         if (vx < 0)
                         {
                             vx = tempVelocityX;
                         }
                     }
                     
-                    // TODO: explain
+                    // moves ball up to prevent double bouncing bugs
                     setLocation(ball, getX(ball), getY(paddle) - (2 * RADIUS));
                 }
 
                 // if ball has collided with laser
                 else if (object == laser)
                 {
-                    // TODO: explain
+                    // reset both the laser and the ball
                     setLocation(laser, -20, HEIGHT);
                     setLocation(ball, getX(ball), HEIGHT - 2 * RADIUS);
                     laserActive = false;
@@ -635,14 +633,14 @@ GObject detectLaserCollision(GWindow window, GObject laser)
     GObject object;
 
     // check for collision at laser's top-left corner
-    object = getGObjectAt(window, x, y-1);
+    object = getGObjectAt(window, x, y - 1);
     if (object != NULL)
     {
         return object;
     }
 
     // check for collision at laser's top-right corner
-    object = getGObjectAt(window, x + LASER_WIDTH, y-1);
+    object = getGObjectAt(window, x + LASER_WIDTH, y - 1);
     if (object != NULL)
     {
         return object;
