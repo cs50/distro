@@ -447,10 +447,10 @@ int main(int argc, string argv[])
         }
 
         // re-center ball
-        if (lives > 0)
-        {
-            setLocation(ball, WIDTH / 2 - RADIUS, HEIGHT / 2 - RADIUS);
-        }
+        setLocation(ball, WIDTH / 2 - RADIUS, HEIGHT / 2 - RADIUS);
+
+        // hides laser
+        setLocation(laser, -20, HEIGHT);
 
         // pause before starting new life
         pause(LIFETIME);
