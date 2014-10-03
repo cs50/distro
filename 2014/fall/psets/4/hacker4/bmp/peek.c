@@ -1,0 +1,1 @@
+../../pset4/bmp/peek.c
