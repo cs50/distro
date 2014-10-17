@@ -9,18 +9,12 @@
 
 #include <ctype.h>
 #include <stdio.h>
-#include <sys/resource.h>
-#include <sys/time.h>
+#include <time.h>
 
 #include "dictionary.h"
-#undef calculate
-#undef getrusage
 
 // default dictionary
 #define DICTIONARY "/home/cs50/pset5/dictionaries/large"
-
-// prototype
-double calculate(const struct rusage* b, const struct rusage* a);
 
 int main(int argc, char* argv[])
 {
@@ -31,19 +25,19 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // structs for timing data
-    struct rusage before, after;
+    // processor times
+    clock_t before, after;
 
     // benchmarks
-    double ti_load = 0.0, ti_check = 0.0, ti_size = 0.0, ti_unload = 0.0;
+    clock_t time_load = 0, time_check = 0, time_size = 0, time_unload = 0;
 
     // determine dictionary to use
     char* dictionary = (argc == 3) ? argv[1] : DICTIONARY;
 
     // load dictionary
-    getrusage(RUSAGE_SELF, &before);
+    before = clock();
     bool loaded = load(dictionary);
-    getrusage(RUSAGE_SELF, &after);
+    after = clock();
 
     // abort if dictionary not loaded
     if (!loaded)
@@ -53,7 +47,7 @@ int main(int argc, char* argv[])
     }
 
     // calculate time to load dictionary
-    ti_load = calculate(&before, &after);
+    time_load = after - before;
 
     // try to open text
     char* text = (argc == 3) ? argv[2] : argv[1];
@@ -113,12 +107,12 @@ int main(int argc, char* argv[])
             words++;
 
             // check word's spelling
-            getrusage(RUSAGE_SELF, &before);
+            before = clock();
             bool misspelled = !check(word);
-            getrusage(RUSAGE_SELF, &after);
+            after = clock();
 
             // update benchmark
-            ti_check += calculate(&before, &after);
+            time_check += after - before;
 
             // print word if misspelled
             if (misspelled)
@@ -145,17 +139,17 @@ int main(int argc, char* argv[])
     fclose(fp);
 
     // determine dictionary's size
-    getrusage(RUSAGE_SELF, &before);
+    before = clock();
     unsigned int n = size();
-    getrusage(RUSAGE_SELF, &after);
+    after = clock();
 
     // calculate time to determine dictionary's size
-    ti_size = calculate(&before, &after);
+    time_size = after - before;
 
     // unload dictionary
-    getrusage(RUSAGE_SELF, &before);
+    before = clock();
     bool unloaded = unload();
-    getrusage(RUSAGE_SELF, &after);
+    after = clock();
 
     // abort if dictionary not unloaded
     if (!unloaded)
@@ -165,38 +159,19 @@ int main(int argc, char* argv[])
     }
 
     // calculate time to unload dictionary
-    ti_unload = calculate(&before, &after);
+    time_unload = after - before;
 
     // report benchmarks
-    printf("\nWORDS MISSPELLED:     %d\n", misspellings);
-    printf("WORDS IN DICTIONARY:  %d\n", n);
-    printf("WORDS IN TEXT:        %d\n", words);
-    printf("TIME IN load:         %.2f\n", ti_load);
-    printf("TIME IN check:        %.2f\n", ti_check);
-    printf("TIME IN size:         %.2f\n", ti_size);
-    printf("TIME IN unload:       %.2f\n", ti_unload);
-    printf("TIME IN TOTAL:        %.2f\n\n", 
-     ti_load + ti_check + ti_size + ti_unload);
+    printf("\nWORDS MISSPELLED:     %i\n", misspellings);
+    printf("WORDS IN DICTIONARY:  %i\n", n);
+    printf("WORDS IN TEXT:        %i\n", words);
+    printf("TIME IN load:         %li\n", time_load);
+    printf("TIME IN check:        %li\n", time_check);
+    printf("TIME IN size:         %li\n", time_size);
+    printf("TIME IN unload:       %li\n", time_unload);
+    printf("TIME IN TOTAL:        %li\n\n", 
+     time_load + time_check + time_size + time_unload);
 
     // that's all folks
     return 0;
-}
-
-/**
- * Returns number of seconds between b and a.
- */
-double calculate(const struct rusage* b, const struct rusage* a)
-{
-    if (b == NULL || a == NULL)
-    {
-        return 0.0;
-    }
-    else
-    {
-        return ((((a->ru_utime.tv_sec * 1000000 + a->ru_utime.tv_usec) -
-                 (b->ru_utime.tv_sec * 1000000 + b->ru_utime.tv_usec)) +
-                ((a->ru_stime.tv_sec * 1000000 + a->ru_stime.tv_usec) -
-                 (b->ru_stime.tv_sec * 1000000 + b->ru_stime.tv_usec)))
-                / 1000000.0);
-    }
 }
