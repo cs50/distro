@@ -2,7 +2,7 @@
  * speller.c
  *
  * Computer Science 50
- * Problem Set 6
+ * Problem Set 5
  *
  * Implements a spell-checker.
  ***************************************************************************/
@@ -13,10 +13,11 @@
 #include <sys/time.h>
 
 #include "dictionary.h"
+#undef calculate
 #undef getrusage
 
 // default dictionary
-#define DICTIONARY "/home/cs50/pset6/dictionaries/large"
+#define DICTIONARY "/home/cs50/pset5/dictionaries/large"
 
 // prototype
 double calculate(const struct rusage* b, const struct rusage* a);
