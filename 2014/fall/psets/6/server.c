@@ -1,8 +1,10 @@
+// feature test macro requirement
 #define _XOPEN_SOURCE
 
 // capacity of our buffer
 #define CAPACITY 2048
 
+// header files
 #include <arpa/inet.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -12,26 +14,66 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+// prototypes
+void usage(void);
+
 int main(int argc, char* argv[])
 {
+    // disable quiet mode by default
+    bool quiet = false;
 
     // default to a random port
     int port = 0;
 
     // parse command-line arguments
     int opt;
-    while ((opt = getopt(argc, argv, "p:")) != -1)
+    while ((opt = getopt(argc, argv, "p:q")) != -1)
     {
         switch (opt)
         {
-            // port
+            // -h
+            case 'h':
+                usage();
+                return 0;
+
+            // -p
             case 'p':
                 port = atoi(optarg);
                 break;
 
-            // TODO: expect first non-opt arg to be DOCUMENT_ROOT
+            // -q
+            case 'q':
+                quiet = true;
+                break;
         }
     }
+
+    // ensure server's root was specified
+    if (argv[optind] == NULL)
+    {
+        usage();
+        return -1;
+    }
+
+    // path to server's root
+    char* root = argv[optind];
+
+    // ensure root exists
+    if (access(root, F_OK) == -1)
+    {
+        printf("%s\n", strerror(errno));
+        return -1;
+    }
+
+    // ensure root is executable
+    if (access(root, X_OK) == -1)
+    {
+        printf("%s\n", strerror(errno));
+        return -1;
+    }
+
+    // announce root
+    printf("Using %s for server's root\n", root);
 
     // create a socket
     int sfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -127,31 +169,37 @@ int main(int argc, char* argv[])
                 // append these bytes to bytes already read
                 strncpy(headers + length, buffer, n);
                 length += n;
-                buffer[length] = '\0';
+                headers[length] = '\0';
 
-                /* DEBUGGING
-                printf("%i: ", length);
-                for (int i = 0; i < length; i++)
-                    printf("%i ", headers[i]);
-                printf("\n");
-                */
-
-                // TODO: fix bug whereby -3 goes too far to left of headers
                 // stop reading from socket once done reading headers
                 // (as is indicated by presence of CRLF CRLF)
-                if (strstr(headers + length - n - 3, "\r\n\r\n"))
+                int offset = (length - n < 3) ? length - n : 3;
+                if (strstr(headers + length - n - offset, "\r\n\r\n"))
                 {
                     break;
                 }
             }
         }
 
-        // log header's request line
-        char* needle = strstr(headers, "\r\n");
-        if (needle != NULL)
+        // if in quiet mode, only log headers' request line (up through first CRLF)
+        if (quiet)
         {
-            printf("%.*s\n", needle - headers, headers);
+            char* needle = strstr(headers, "\r\n");
+            if (needle != NULL)
+            {
+                printf("%.*s", needle - headers + 2, headers);
+            }
         }
+
+        // else log all headers
+        else
+        {
+            printf("%s", headers);
+        }
+
+        // free headers
+        free(headers);
+        headers = NULL;
 
         // close client's socket
         close(cfd);
@@ -159,4 +207,12 @@ int main(int argc, char* argv[])
 
     // close server's socket
     close(sfd);
+}
+
+/**
+ * Prints program's usage.
+ */
+void usage(void)
+{
+    printf("Usage: server [-p port] [-q] /path/to/root\n");
 }
