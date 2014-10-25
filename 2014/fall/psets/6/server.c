@@ -181,6 +181,31 @@ int main(int argc, char* argv[])
             }
         }
 
+        // find first SP in headers
+        char* needle = strchr(headers, ' ');
+        if (needle == NULL)
+        {
+            printf("Invalid Request-Line\n")l
+            return -1
+        }
+
+        // ensure request's method is GET
+        if (strnmp("GET", headers, needle - headers) != 0)
+        {
+            printf("Unsupported method\n");
+            return -1;
+        }
+
+        // find second SP in headers
+        needle = strchr(needle + 1, ' ');
+        if (needle == NULL)
+        {
+            printf("Invalid Request-Line\n");
+            return -1;
+        }
+
+        char path[];
+
         // if in quiet mode, only log headers' request line (up through first CRLF)
         if (quiet)
         {
@@ -196,6 +221,8 @@ int main(int argc, char* argv[])
         {
             printf("%s", headers);
         }
+
+        
 
         // free headers
         free(headers);
