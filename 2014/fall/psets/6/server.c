@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    // allow reuse of address
+    // allow reuse of address (to avoid "Address already in use")
     int optval = 1;
     setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 
@@ -182,29 +182,50 @@ int main(int argc, char* argv[])
         }
 
         // find first SP in headers
-        char* needle = strchr(headers, ' ');
-        if (needle == NULL)
-        {
-            printf("Invalid Request-Line\n")l
-            return -1
-        }
-
-        // ensure request's method is GET
-        if (strnmp("GET", headers, needle - headers) != 0)
-        {
-            printf("Unsupported method\n");
-            return -1;
-        }
-
-        // find second SP in headers
-        needle = strchr(needle + 1, ' ');
+        char* haystack = headers;
+        char* needle = strchr(haystack, ' ');
         if (needle == NULL)
         {
             printf("Invalid Request-Line\n");
             return -1;
         }
 
-        char path[];
+        // ensure request's method is GET
+        if (strncmp("GET", haystack, needle - haystack) != 0)
+        {
+            printf("Unsupported method\n");
+            return -1;
+        }
+
+        // find second SP in headers
+        haystack = needle + 1;
+        needle = strchr(haystack, ' ');
+        if (needle == NULL)
+        {
+            printf("Invalid Request-Line\n");
+            return -1;
+        }
+
+        // copy request's path from haystack
+        char path[needle - haystack + 1];
+        strncpy(path, haystack, needle - haystack);
+        path[needle - haystack] = '\0';
+
+        // find first CRLF in headers
+        haystack = needle + 1;
+        needle = strstr(haystack, "\r\n");
+        if (needle == NULL)
+        {
+            printf("Invalid Request-Line\n");
+            return -1;
+        }
+
+        // ensure request's version is HTTP/1.1
+        if (strncmp("HTTP/1.1", haystack, needle - haystack) != 0)
+        {
+            printf("Unsupported version\n");
+            return -1;
+        }
 
         // if in quiet mode, only log headers' request line (up through first CRLF)
         if (quiet)
@@ -222,8 +243,6 @@ int main(int argc, char* argv[])
             printf("%s", headers);
         }
 
-        
-
         // free headers
         free(headers);
         headers = NULL;
@@ -232,8 +251,19 @@ int main(int argc, char* argv[])
         close(cfd);
     }
 
+    error:
+
+    // close client's socket
+    if (cfd != NULL)
+    {
+        close(cfd);
+    }
+
     // close server's socket
-    close(sfd);
+    if (sfd != NULL)
+    {
+        close(sfd);
+    }
 }
 
 /**
