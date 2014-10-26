@@ -24,6 +24,8 @@ char* headers = NULL;
 // prototypes
 void teardown(void);
 
+// TODO: add ANSI codes, wrap warn and err?
+
 int main(int argc, char* argv[])
 {
     // a global variable defined in errno.h that's "set by system 
@@ -218,8 +220,8 @@ int main(int argc, char* argv[])
             warn("Unsupported version\n");
         }
 
-        // log headers
-        printf("%s", headers);
+        // log headers, trimming one CRLF
+        printf("%.*s", strlen(headers) - 2, headers);
 
         // free headers
         free(headers);
