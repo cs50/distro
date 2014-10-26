@@ -6,6 +6,7 @@
 
 // header files
 #include <arpa/inet.h>
+#include <err.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -14,36 +15,42 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+// file descriptors for sockets
+int cfd = -1, sfd = -1;
+
+// a request's headers
+char* headers = NULL;
+
 // prototypes
-void usage(void);
+void teardown(void);
 
 int main(int argc, char* argv[])
 {
-    // disable quiet mode by default
-    bool quiet = false;
+    // a global variable defined in errno.h that's "set by system 
+    // calls and some library functions [to a nonzero value]
+    // in the event of an error to indicate what went wrong"
+    errno = 0;
 
     // default to a random port
     int port = 0;
 
+    // usage
+    const char* usage = "Usage: server [-p port] [-q] /path/to/root";
+
     // parse command-line arguments
     int opt;
-    while ((opt = getopt(argc, argv, "p:q")) != -1)
+    while ((opt = getopt(argc, argv, "hp:")) != -1)
     {
         switch (opt)
         {
             // -h
             case 'h':
-                usage();
+                printf("%s\n", usage);
                 return 0;
 
-            // -p
+            // -p port
             case 'p':
                 port = atoi(optarg);
-                break;
-
-            // -q
-            case 'q':
-                quiet = true;
                 break;
         }
     }
@@ -51,8 +58,8 @@ int main(int argc, char* argv[])
     // ensure server's root was specified
     if (argv[optind] == NULL)
     {
-        usage();
-        return -1;
+        printf("%s\n", usage);
+        return 1;
     }
 
     // path to server's root
@@ -61,26 +68,23 @@ int main(int argc, char* argv[])
     // ensure root exists
     if (access(root, F_OK) == -1)
     {
-        printf("%s\n", strerror(errno));
-        return -1;
+        teardown();
     }
 
     // ensure root is executable
     if (access(root, X_OK) == -1)
     {
-        printf("%s\n", strerror(errno));
-        return -1;
+        teardown();
     }
 
     // announce root
     printf("Using %s for server's root\n", root);
 
     // create a socket
-    int sfd = socket(AF_INET, SOCK_STREAM, 0);
+    sfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sfd == -1)
     {
-        printf("%s\n", strerror(errno));
-        return -1;
+        teardown();
     }
 
     // allow reuse of address (to avoid "Address already in use")
@@ -95,15 +99,13 @@ int main(int argc, char* argv[])
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     if (bind(sfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) == -1)
     {
-        printf("%s\n", strerror(errno));
-        return -1;
+        teardown();
     }
 
     // listen for connections
     if (listen(sfd, SOMAXCONN) == -1)
     {
-        printf("%s\n", strerror(errno));
-        return -1;
+        teardown();
     }
 
     // announce port in use
@@ -111,26 +113,24 @@ int main(int argc, char* argv[])
     socklen_t addrlen = sizeof(addr);
     if (getsockname(sfd, (struct sockaddr*) &addr, &addrlen) == -1)
     {
-        printf("%s\n", strerror(errno));
-        return -1;
+        teardown();
     }
     printf("Listening on port %i\n", ntohs(addr.sin_port));
 
     // accept connections on port
     while (true)
     {
+        // accept a connection from a client, blocking until one is heard
         struct sockaddr_in cli_addr;
         memset(&cli_addr, 0, sizeof(cli_addr));
         socklen_t cli_len = sizeof(cli_addr);
-        int cfd = accept(sfd, (struct sockaddr*) &cli_addr, &cli_len);
+        cfd = accept(sfd, (struct sockaddr*) &cli_addr, &cli_len);
         if (cfd == -1)
         {
-            printf("%s\n", strerror(errno));
-            return -1;
+            teardown();
         }
 
         // read request's headers
-        char* headers = NULL;
         unsigned int length = 0;
         while (true)
         {
@@ -141,9 +141,7 @@ int main(int argc, char* argv[])
             // check for error
             if (n == -1)
             {
-                printf("%s\n", strerror(errno));
-                free(headers);
-                return -1;
+                teardown();
             }
 
             // check if nothing's been read (since socket's been closed),
@@ -160,9 +158,7 @@ int main(int argc, char* argv[])
                 char* temp = realloc(headers, length + n + 1);
                 if (temp == NULL)
                 {
-                    free(headers);
-                    printf("Unable to reallocate memory\n");
-                    return -1;
+                    teardown();
                 }
                 headers = temp;
 
@@ -186,15 +182,13 @@ int main(int argc, char* argv[])
         char* needle = strchr(haystack, ' ');
         if (needle == NULL)
         {
-            printf("Invalid Request-Line\n");
-            return -1;
+            warn("Invalid Request-Line\n");
         }
 
         // ensure request's method is GET
         if (strncmp("GET", haystack, needle - haystack) != 0)
         {
-            printf("Unsupported method\n");
-            return -1;
+            warn("Unsupported method\n");
         }
 
         // find second SP in headers
@@ -202,8 +196,7 @@ int main(int argc, char* argv[])
         needle = strchr(haystack, ' ');
         if (needle == NULL)
         {
-            printf("Invalid Request-Line\n");
-            return -1;
+            warn("Invalid Request-Line\n");
         }
 
         // copy request's path from haystack
@@ -216,32 +209,17 @@ int main(int argc, char* argv[])
         needle = strstr(haystack, "\r\n");
         if (needle == NULL)
         {
-            printf("Invalid Request-Line\n");
-            return -1;
+            warn("Invalid Request-Line\n");
         }
 
         // ensure request's version is HTTP/1.1
         if (strncmp("HTTP/1.1", haystack, needle - haystack) != 0)
         {
-            printf("Unsupported version\n");
-            return -1;
+            warn("Unsupported version\n");
         }
 
-        // if in quiet mode, only log headers' request line (up through first CRLF)
-        if (quiet)
-        {
-            char* needle = strstr(headers, "\r\n");
-            if (needle != NULL)
-            {
-                printf("%.*s", needle - headers + 2, headers);
-            }
-        }
-
-        // else log all headers
-        else
-        {
-            printf("%s", headers);
-        }
+        // log headers
+        printf("%s", headers);
 
         // free headers
         free(headers);
@@ -249,27 +227,53 @@ int main(int argc, char* argv[])
 
         // close client's socket
         close(cfd);
-    }
-
-    error:
-
-    // close client's socket
-    if (cfd != NULL)
-    {
-        close(cfd);
-    }
-
-    // close server's socket
-    if (sfd != NULL)
-    {
-        close(sfd);
+        cfd = -1;
     }
 }
 
 /**
- * Prints program's usage.
+ * Handles signals.
  */
-void usage(void)
+void handler(void)
 {
-    printf("Usage: server [-p port] [-q] /path/to/root\n");
+    teardown();
+}
+
+/**
+ * Tears down web server.
+ */
+void teardown(void)
+{
+    // preserve errno across this function's library calls
+    int errsv = errno;
+
+    // free headers
+    if (headers != NULL)
+    {
+        free(headers);
+    }
+
+    // close client socket
+    if (cfd != -1)
+    {
+        close(cfd);
+    }
+
+    // close server socket
+    if (sfd != -1)
+    {
+        close(sfd);
+    }
+
+    // terminate process
+    if (errsv == 0)
+    {
+        // success
+        exit(0);
+    }
+    else
+    {
+        // failure
+        err(errsv, NULL);
+    }
 }
