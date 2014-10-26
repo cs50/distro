@@ -17,10 +17,10 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <math.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -29,14 +29,14 @@
 #include <unistd.h>
 
 // types
-typedef uint8_t BYTE;
+typedef char BYTE;
 
 // prototypes
 bool connected(void);
 void handler(int signal);
 const char* lookup(const char* extension);
-const char* parse(void);
-bool respond(unsigned short code, unsigned long long length, const char* type, BYTE* content);
+const BYTE* parse(void);
+bool respond(unsigned short code, ...);
 void reset(void);
 void start(unsigned short port, const char* path);
 void stop(void);
@@ -109,38 +109,49 @@ int main(int argc, char* argv[])
         if (connected())
         {
             // parse request, omitting message-body
-            const char* request = parse();
+            const BYTE* request = parse();
             if (request == NULL)
             {
                 continue;
             }
 
-            // TODO: convert %20 et al.
-
-            // find first SP in request
+            // extract Request-Line
             const char* haystack = request;
-            char* needle = strchr(haystack, ' ');
+            char* needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
-                respond(400, 0, NULL, NULL);
+                respond(400);
+            }
+            char line[needle - haystack + 2 + 1];
+            strncpy(line, haystack, needle - haystack + 2);
+            line[needle - haystack + 2] = '\0';
+
+            // TODO: convert %20 et al.
+
+            // find first SP in Request-Line
+            haystack = line;
+            needle = strchr(haystack, ' ');
+            if (needle == NULL)
+            {
+                respond(400);
                 continue;
             }
 
-            // Method
+            // extract Method
             char method[needle - haystack + 1];
             strncpy(method, haystack, needle - haystack);
             method[needle - haystack] = '\0';
 
-            // find second SP in headers
+            // find second SP in Request-Line
             haystack = needle + 1;
             needle = strchr(haystack, ' ');
             if (needle == NULL)
             {
-                respond(400, 0, NULL, NULL);
+                respond(400);
                 continue;
             }
 
-            // Request-URI
+            // extract Request-URI
             char uri[needle - haystack + 1];
             strncpy(uri, haystack, needle - haystack);
             uri[needle - haystack] = '\0';
@@ -150,11 +161,11 @@ int main(int argc, char* argv[])
             needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
-                respond(414, 0, NULL, NULL);
+                respond(414);
                 continue;
             }
 
-            // Version
+            // extract Version
             char version[needle - haystack + 1];
             strncpy(version, haystack, needle - haystack);
             version[needle - haystack] = '\0';
@@ -162,21 +173,21 @@ int main(int argc, char* argv[])
             // ensure request's method is GET
             if (strcmp("GET", method) != 0)
             {
-                respond(405, 0, NULL, NULL);
+                respond(405);
                 continue;
             }
 
             // ensure Request-URI starts with abs_path
             if (uri[0] != '/')
             {
-                respond(501, 0, NULL, NULL);
+                respond(501);
                 continue;
             }
 
             // ensure request's version is HTTP/1.1
             if (strncmp("HTTP/1.1", haystack, needle - haystack) != 0)
             {
-                respond(505, 0, NULL, NULL);
+                respond(505);
                 continue;
             }
             
@@ -188,14 +199,14 @@ int main(int argc, char* argv[])
             // ensure file exists
             if (access(path, F_OK) == -1)
             {
-                respond(404, 0, NULL, NULL);
+                respond(404);
                 continue;
             }
 
             // ensure file is readable
             if (access(path, R_OK) == -1)
             {
-                respond(403, 0, NULL, NULL);
+                respond(403);
                 continue;
             }
 
@@ -204,7 +215,7 @@ int main(int argc, char* argv[])
             needle = strrchr(haystack, '.');
             if (needle == NULL)
             {
-                respond(501, 0, NULL, NULL);
+                respond(501);
                 continue;
             }
             char extension[strlen(needle)];
@@ -214,7 +225,7 @@ int main(int argc, char* argv[])
             const char* type = lookup(extension);
             if (type == NULL)
             {
-                respond(501, 0, NULL, NULL);
+                respond(501);
                 continue;
             }
 
@@ -222,7 +233,7 @@ int main(int argc, char* argv[])
             int fd = open(path, O_RDONLY);
             if (fd == -1)
             {
-                respond(500, 0, NULL, NULL);
+                respond(500);
                 continue;
             }
 
@@ -230,18 +241,17 @@ int main(int argc, char* argv[])
             off_t length = lseek(fd, 0, SEEK_END);
             lseek(fd, 0, SEEK_SET);
 
-            // respond to client
-            respond(200, length, type, NULL);
-
-            /*
-            // read from file, write to client's socket
-            char buffer[CAPACITY];
+            // read file into buffer
+            char buffer[length];
             ssize_t n;
             while ((n = read(fd, buffer, CAPACITY)) > 0) // TODO: check for error
             {
                 write(cfd, buffer, n);
             }
-            */
+
+            // respond to client
+            respond(200, length, type, NULL);
+
         }
     }
 }
@@ -361,7 +371,7 @@ const char* parse(void)
         ssize_t bytes = read(cfd, request + length, limit - 1 - length);
         if (bytes == -1)
         {
-            respond(500, 0, NULL, NULL);
+            respond(500);
             return NULL;
         }
 
@@ -392,7 +402,7 @@ const char* parse(void)
         //
         if (length == limit)
         {
-            respond(413, 0, NULL, NULL);
+            respond(413);
             return NULL;
         }
     }
@@ -418,7 +428,8 @@ void reset(void)
 /**
  * Responds to client.
  */
-bool respond(unsigned short code, unsigned long long length, const char* type, BYTE* content)
+bool respond(unsigned short code, ...)
+//bool respond(unsigned short code, unsigned long long length, const char* type, BYTE* content)
 {
     // ensure client's socket is open
     if (cfd == -1)
@@ -426,7 +437,7 @@ bool respond(unsigned short code, unsigned long long length, const char* type, B
         return false;
     }
 
-    // Status-Line
+    // determine Status-Line's phrase
     const char* phrase = NULL;
     switch (code)
     {
@@ -442,39 +453,65 @@ bool respond(unsigned short code, unsigned long long length, const char* type, B
     {
         return false;
     }
+
+    // variable arguments
+    unsigned long long length;
+    char* type;
+    BYTE* content;
+    if (code == 200)
+    {
+        va_list ap;
+        va_start(ap, code);
+        length = va_arg(ap, unsigned long long);
+        type = va_arg(ap, char*);
+        content = va_arg(ap, BYTE*);
+        va_end(ap);
+    }
+    else
+    {
+        char* template = "<html><head><title>%i %s</title></head><body><h1>%i %s</h1></body></html>";
+        char buffer[strlen(template) + 2 * ((int) log10(code) + 1) + 2 * strlen(phrase) + 1];
+        length = sprintf(buffer, template, code, phrase, code, phrase);
+        type = "text/html";
+        content = buffer;
+    }
+
+    // respond with Status-Line
     if (dprintf(cfd, "HTTP/1.1 %i %s\r\n", code, phrase) < 0)
     {
         return false;
     }
 
-    // Connection header
+    // respond with Connection header
     if (dprintf(cfd, "Connection: close\r\n") < 0)
     {
         return false;
     }
-
-    // Content-Length header
+    // respond with Content-Length header
     if (dprintf(cfd, "Content-Length: %lld\r\n", length) < 0)
     {
         return false;
     }
 
-    // Content-Type header
+    // respond with Content-Type header
     if (dprintf(cfd, "Content-Type: %s\r\n", type) < 0)
     {
         return false;
     }
 
-    // CRLF
+    // respond with CRLF
     if (dprintf(cfd, "\r\n") < 0)
     {
         return false;
     }
 
-    // message-body
-    if (write(cfd, content, length) == -1)
+    // respond with message-body
+    if (length > 0)
     {
-        return false;
+        if (write(cfd, content, length) == -1)
+        {
+            return false;
+        }
     }
 
     // responded
