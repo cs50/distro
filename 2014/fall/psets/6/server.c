@@ -3,12 +3,13 @@
 #define _XOPEN_SOURCE 700
 #define _XOPEN_SOURCE_EXTENDED
 
+// limits on an HTTP request's size, based on Apache's
 // http://httpd.apache.org/docs/2.2/mod/core.html
 #define LimitRequestFields 50
 #define LimitRequestFieldSize 4094
 #define LimitRequestLine 8190
 
-// number of octets to read when buffering
+// number of octets for buffered reads
 #define OCTETS 512
 
 // header files
@@ -61,10 +62,10 @@ int main(int argc, char* argv[])
     errno = 0;
 
     // default to a random port
-    short port = 0;
+    int port = 0;
 
     // usage
-    const char* usage = "Usage: server [-p port] [-q] /path/to/root";
+    const char* usage = "Usage: server [-p port] /path/to/root";
 
     // parse command-line arguments
     int opt;
@@ -84,8 +85,8 @@ int main(int argc, char* argv[])
         }
     }
 
-    // ensure path to server's root was specified
-    if (port < 0 || argv[optind] == NULL || strlen(argv[optind]) == 0)
+    // ensure port is a non-negative short and path to server's root is specified
+    if (port < 0 || port > SHRT_MAX || argv[optind] == NULL || strlen(argv[optind]) == 0)
     {
         // announce usage
         printf("%s\n", usage);
@@ -368,7 +369,7 @@ int main(int argc, char* argv[])
             
             // announce OK
             printf("\033[32m");
-            printf("200 OK");
+            printf("HTTP/1.1 200 OK");
             printf("\033[39m\n");
         }
     }
@@ -376,6 +377,7 @@ int main(int argc, char* argv[])
 
 /**
  * Accepts a connection from a client, blocking (i.e., waiting) until one is heard.
+ * Upon success, returns true; upon failure, returns false.
  */
 bool connected(void)
 {
@@ -391,7 +393,7 @@ bool connected(void)
 }
 
 /**
- * Handles 4xx and 5xx.
+ * Handles client errors (4xx) and server errors (5xx).
  */
 bool err(unsigned short code)
 {
@@ -401,7 +403,14 @@ bool err(unsigned short code)
         return false;
     }
 
+    // ensure code is within range
+    if (code < 400 || code > 599)
+    {
+        return false;
+    }
+
     // determine Status-Line's phrase
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html#sec6.1
     const char* phrase = NULL;
     switch (code)
     {
@@ -542,7 +551,9 @@ void handler(int signal)
         errno = 0;
 
         // announce stop
+        printf("\033[33m");
         printf("Stopping server\n");
+        printf("\033[39m");
 
         // stop server
         stop();
