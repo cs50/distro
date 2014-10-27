@@ -1,3 +1,10 @@
+//
+// server.c
+//
+// David J. Malan
+// malan@harvard.edu
+//
+
 // feature test macro requirements
 #define _GNU_SOURCE
 #define _XOPEN_SOURCE 700
