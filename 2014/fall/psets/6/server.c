@@ -13,9 +13,7 @@
 
 // header files
 #include <arpa/inet.h>
-#include <err.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <limits.h>
 #include <math.h>
 #include <signal.h>
@@ -24,18 +22,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 // types
-typedef char BYTE;
+typedef char OCTET;
 
 // prototypes
 bool connected(void);
 void handler(int signal);
 const char* lookup(const char* extension);
-const BYTE* parse(void);
+const OCTET* parse(void);
 bool respond(unsigned short code, ...);
 void reset(void);
 void start(unsigned short port, const char* path);
@@ -49,8 +45,6 @@ int cfd = -1, sfd = -1;
 
 // FILE pointer for files
 FILE* file = NULL;
-
-// TODO: add ANSI codes, wrap warn and err?
 
 int main(int argc, char* argv[])
 {
@@ -108,25 +102,33 @@ int main(int argc, char* argv[])
         // wait until client is connected
         if (connected())
         {
-            // parse request, omitting message-body
-            const BYTE* request = parse();
+            // parse client's HTTP request, omitting message-body
+            const OCTET* request = parse();
             if (request == NULL)
             {
+                respond(500);
                 continue;
             }
 
-            // extract Request-Line
+            // extract request's Request-Line
             const char* haystack = request;
             char* needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
                 respond(400);
+                continue;
             }
+            else if (needle - haystack + 2 > LimitRequestLine)
+            {
+                respond(414);
+                continue;
+            }   
             char line[needle - haystack + 2 + 1];
             strncpy(line, haystack, needle - haystack + 2);
             line[needle - haystack + 2] = '\0';
 
-            // TODO: convert %20 et al.
+            // log Request-Line
+            printf("%s", line);
 
             // find first SP in Request-Line
             haystack = line;
@@ -156,7 +158,7 @@ int main(int argc, char* argv[])
             strncpy(uri, haystack, needle - haystack);
             uri[needle - haystack] = '\0';
 
-            // find first CRLF in headers
+            // find first CRLF in Request-Line
             haystack = needle + 1;
             needle = strstr(haystack, "\r\n");
             if (needle == NULL)
@@ -185,16 +187,39 @@ int main(int argc, char* argv[])
             }
 
             // ensure request's version is HTTP/1.1
-            if (strncmp("HTTP/1.1", haystack, needle - haystack) != 0)
+            if (strcmp("HTTP/1.1", version) != 0)
             {
                 respond(505);
                 continue;
             }
-            
+
+            // find end of abs_path in Request-URI
+            haystack = uri;
+            needle = strchr(haystack, '?');
+            if (needle == NULL)
+            {
+                needle = uri + strlen(uri);
+            }
+
+            // extract abs_path
+            char abs_path[needle - haystack + 1];
+            strncpy(abs_path, uri, needle - haystack);
+            abs_path[needle - haystack] = '\0';
+
+            // find start of query in Request-URI
+            if (*needle == '?')
+            {
+                needle = needle + 1;
+            }
+
+            // extract query
+            char query[strlen(needle) + 1];
+            strcpy(query, needle);
+
             // determine file's full path
-            char path[strlen(root) + strlen(uri) + 1];
+            char path[strlen(root) + strlen(abs_path) + 1];
             strcpy(path, root);
-            strcat(path, uri);
+            strcat(path, abs_path);
 
             // ensure file exists
             if (access(path, F_OK) == -1)
@@ -230,17 +255,20 @@ int main(int argc, char* argv[])
             }
 
             // open file
-            int fd = open(path, O_RDONLY);
-            if (fd == -1)
+            file = fopen(path, "r");
+            if (file == NULL)
             {
                 respond(500);
                 continue;
             }
 
+            /*
             // determine file's length
             off_t length = lseek(fd, 0, SEEK_END);
             lseek(fd, 0, SEEK_SET);
+            */
 
+            /*
             // read file into buffer
             char buffer[length];
             ssize_t n;
@@ -251,7 +279,7 @@ int main(int argc, char* argv[])
 
             // respond to client
             respond(200, length, type, NULL);
-
+            */
         }
     }
 }
@@ -283,14 +311,6 @@ void handler(int signal)
         printf("Stopping server\n");
         stop();
     }
-}
-
-/**
- * TODO: add color somehow
- */
-void logger(const char* message)
-{
-    printf("%s", message);
 }
 
 /**
@@ -348,7 +368,7 @@ const char* lookup(const char* extension)
 }
 
 /**
- * Parses an HTTP request.
+ * Parses an HTTP request, returning Request-Line plus any headers plus one CRLF.
  */
 const char* parse(void)
 {
@@ -361,14 +381,12 @@ const char* parse(void)
     // number of bytes that will be allowed in an HTTP request
     static char request[LimitRequestLine + LimitRequestFields * LimitRequestFieldSize + LimitRequestBody + 1];
 
-    unsigned int limit = LimitRequestLine + LimitRequestFields * LimitRequestFieldSize + LimitRequestBody + 1;
-
     // read request's headers
     ssize_t length = 0;
     while (true)
     {
         // read from socket
-        ssize_t bytes = read(cfd, request + length, limit - 1 - length);
+        ssize_t bytes = read(cfd, request + length, sizeof(request) - 1 - length);
         if (bytes == -1)
         {
             respond(500);
@@ -388,48 +406,55 @@ const char* parse(void)
             break;
         }
 
-        // check if we've read CRLF CRLF yet
-        char* haystack = request;
+        // search for CRLF CRLF
+        int offset = (length - bytes < 3) ? length - bytes : 3;
+        char* haystack = request + length - bytes - offset;
         char* needle = strstr(haystack, "\r\n\r\n");
         if (needle != NULL)
         {
+            // trim one CRLF
             *(needle + 2) = '\0';
             break;
         }
 
-        //int offset = (length - bytes < 1) ? length - bytes : 1;
-        
-        //
-        if (length == limit)
+        // if buffer's full and we still haven't found CRLF CRLF,
+        // then request is too large
+        if (length == sizeof(request) - 1)
         {
             respond(413);
             return NULL;
         }
     }
 
+    // success
     return request;
 }
 
 /**
  * Resets server's state, deallocating any resources.
- *
- * TODO: deallocate fd here too.
  */
 void reset(void)
 {
+    // close file
+    if (file != NULL)
+    {
+        fclose(file);
+        file = NULL;
+    }
+
     // close client's socket
     if (cfd != -1)
     {
         close(cfd);
+        cfd = -1;
     }
-    cfd = -1;
 }
 
 /**
  * Responds to client.
  */
-bool respond(unsigned short code, ...)
-//bool respond(unsigned short code, unsigned long long length, const char* type, BYTE* content)
+bool error(unsigned short code, ...)
+//bool respond(unsigned short code, unsigned long long length, const char* type, OCTET* content)
 {
     // ensure client's socket is open
     if (cfd == -1)
@@ -445,8 +470,11 @@ bool respond(unsigned short code, ...)
         case 403: phrase = "Forbidden"; break;
         case 404: phrase = "Not Found"; break;
         case 405: phrase = "Method Not Allowed"; break;
+        case 413: phrase = "Request Entity Too Large"; break;
         case 414: phrase = "Request-URI Too Long"; break;
+        case 418: phrase = "I'm a teapot"; break;
         case 500: phrase = "Internal Server Error"; break;
+        case 501: phrase = "Not Implemented"; break;
         case 505: phrase = "HTTP Version Not Supported"; break;
     }
     if (phrase == NULL)
@@ -454,24 +482,27 @@ bool respond(unsigned short code, ...)
         return false;
     }
 
+    // template for 
+    char* template = "<html><head><title>%i %s</title></head><body><h1>%i %s</h1></body></html>";
+    char buffer[strlen(template) + 2 * ((int) log10(code) + 1 - 2) + 2 * (strlen(phrase) - 2) + 1];
+
     // variable arguments
     unsigned long long length;
     char* type;
-    BYTE* content;
+    OCTET* content;
     if (code == 200)
     {
         va_list ap;
         va_start(ap, code);
         length = va_arg(ap, unsigned long long);
         type = va_arg(ap, char*);
-        content = va_arg(ap, BYTE*);
+        content = va_arg(ap, OCTET*);
         va_end(ap);
     }
     else
     {
-        char* template = "<html><head><title>%i %s</title></head><body><h1>%i %s</h1></body></html>";
-        char buffer[strlen(template) + 2 * ((int) log10(code) + 1) + 2 * strlen(phrase) + 1];
         length = sprintf(buffer, template, code, phrase, code, phrase);
+        printf("%s\n", buffer);
         type = "text/html";
         content = buffer;
     }
@@ -543,7 +574,6 @@ void start(unsigned short port, const char* path)
     }
 
     // announce root
-    // TODO: change to log
     printf("Using %s for server's root\n", root);
 
     // create a socket
@@ -581,8 +611,6 @@ void start(unsigned short port, const char* path)
     {
         stop();
     }
-
-    // TODO: change to log
     printf("Listening on port %i\n", ntohs(addr.sin_port));
 }
 
@@ -618,6 +646,7 @@ void stop(void)
     else
     {
         // failure
-        err(errsv, NULL);
+        printf("%s\n", strerror(errsv));
+        exit(1);
     }
 }
