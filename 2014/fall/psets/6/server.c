@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            // extract request's Request-Line
+            // extract request's request-line
             // http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
             const char* haystack = request;
             char* needle = strstr(haystack, "\r\n");
@@ -135,10 +135,10 @@ int main(int argc, char* argv[])
             strncpy(line, haystack, needle - haystack + 2);
             line[needle - haystack + 2] = '\0';
 
-            // log Request-Line
+            // log request-line
             printf("%s", line);
 
-            // find first SP in Request-Line
+            // find first SP in request-line
             haystack = line;
             needle = strchr(haystack, ' ');
             if (needle == NULL)
@@ -147,12 +147,12 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            // extract Method
+            // extract method
             char method[needle - haystack + 1];
             strncpy(method, haystack, needle - haystack);
             method[needle - haystack] = '\0';
 
-            // find second SP in Request-Line
+            // find second SP in request-line
             haystack = needle + 1;
             needle = strchr(haystack, ' ');
             if (needle == NULL)
@@ -161,12 +161,12 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            // extract Request-URI
-            char uri[needle - haystack + 1];
-            strncpy(uri, haystack, needle - haystack);
-            uri[needle - haystack] = '\0';
+            // extract request-target
+            char target[needle - haystack + 1];
+            strncpy(target, haystack, needle - haystack);
+            target[needle - haystack] = '\0';
 
-            // find first CRLF in Request-Line
+            // find first CRLF in request-line
             haystack = needle + 1;
             needle = strstr(haystack, "\r\n");
             if (needle == NULL)
@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            // extract Version
+            // extract HTTP-version
             char version[needle - haystack + 1];
             strncpy(version, haystack, needle - haystack);
             version[needle - haystack] = '\0';
@@ -187,16 +187,16 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            // ensure Request-URI starts with abs_path
-            if (uri[0] != '/')
+            // ensure request-target starts with absolute-path
+            if (target[0] != '/')
             {
                 error(501);
                 continue;
             }
 
-            // ensure Request-URI is safe
+            // ensure request-target is safe
             // http://www.rfc-editor.org/rfc/rfc3986.txt
-            if (strchr(uri, '"') != NULL)
+            if (strchr(target, '"') != NULL)
             {
                 error(400);
                 continue;
@@ -209,20 +209,20 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            // find end of abs_path in Request-URI
-            haystack = uri;
+            // find end of absolute-path in request-target
+            haystack = target;
             needle = strchr(haystack, '?');
             if (needle == NULL)
             {
-                needle = uri + strlen(uri);
+                needle = target + strlen(target);
             }
 
-            // extract abs_path
+            // extract absolute-path 
             char abs_path[needle - haystack + 1];
-            strncpy(abs_path, uri, needle - haystack);
+            strncpy(abs_path, target, needle - haystack);
             abs_path[needle - haystack] = '\0';
 
-            // find start of query in Request-URI
+            // find start of query in request-target
             if (*needle == '?')
             {
                 needle = needle + 1;
@@ -677,7 +677,7 @@ ssize_t parse(void)
             {
                 return -1;
             }
-            request[length] = '\0';
+            request[length - 1] = '\0';
             break;
         }
 
