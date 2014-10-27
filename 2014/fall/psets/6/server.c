@@ -26,11 +26,11 @@
 #include <unistd.h>
 
 // types
-typedef char OCTET;
+typedef char octet;
 
 // prototypes
 bool connected(void);
-bool err(unsigned short code);
+bool error(unsigned short code);
 void handler(int signal);
 ssize_t load(void);
 const char* lookup(const char* extension);
@@ -46,13 +46,13 @@ char* root = NULL;
 int cfd = -1, sfd = -1;
 
 // buffer for request
-OCTET* request = NULL;
+octet* request = NULL;
 
 // FILE pointer for files
 FILE* file = NULL;
 
 // buffer for response-body
-OCTET* body = NULL;
+octet* body = NULL;
 
 int main(int argc, char* argv[])
 {
@@ -123,12 +123,12 @@ int main(int argc, char* argv[])
             char* needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
-                err(400);
+                error(400);
                 continue;
             }
             else if (needle - haystack + 2 > LimitRequestLine)
             {
-                err(414);
+                error(414);
                 continue;
             }   
             char line[needle - haystack + 2 + 1];
@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
             needle = strchr(haystack, ' ');
             if (needle == NULL)
             {
-                err(400);
+                error(400);
                 continue;
             }
 
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
             needle = strchr(haystack, ' ');
             if (needle == NULL)
             {
-                err(400);
+                error(400);
                 continue;
             }
 
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
             needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
-                err(414);
+                error(414);
                 continue;
             }
 
@@ -183,14 +183,14 @@ int main(int argc, char* argv[])
             // ensure request's method is GET
             if (strcmp("GET", method) != 0)
             {
-                err(405);
+                error(405);
                 continue;
             }
 
             // ensure Request-URI starts with abs_path
             if (uri[0] != '/')
             {
-                err(501);
+                error(501);
                 continue;
             }
 
@@ -198,14 +198,14 @@ int main(int argc, char* argv[])
             // http://www.rfc-editor.org/rfc/rfc3986.txt
             if (strchr(uri, '"') != NULL)
             {
-                err(400);
+                error(400);
                 continue;
             }
 
             // ensure request's version is HTTP/1.1
             if (strcmp("HTTP/1.1", version) != 0)
             {
-                err(505);
+                error(505);
                 continue;
             }
 
@@ -240,14 +240,14 @@ int main(int argc, char* argv[])
             // ensure file exists
             if (access(path, F_OK) == -1)
             {
-                err(404);
+                error(404);
                 continue;
             }
 
             // ensure file is readable
             if (access(path, R_OK) == -1)
             {
-                err(403);
+                error(403);
                 continue;
             }
 
@@ -256,7 +256,7 @@ int main(int argc, char* argv[])
             needle = strrchr(haystack, '.');
             if (needle == NULL)
             {
-                err(501);
+                error(501);
                 continue;
             }
             char extension[strlen(needle + 1) + 1];
@@ -272,7 +272,7 @@ int main(int argc, char* argv[])
                 file = popen(command, "r");
                 if (file == NULL)
                 {
-                    err(500);
+                    error(500);
                     continue;
                 }
 
@@ -280,7 +280,7 @@ int main(int argc, char* argv[])
                 ssize_t size = load();
                 if (size == -1)
                 {
-                    err(500);
+                    error(500);
                     continue;
                 }
 
@@ -289,7 +289,7 @@ int main(int argc, char* argv[])
                 needle = memmem(haystack, size, "\r\n\r\n", 4);
                 if (needle == NULL)
                 {
-                    err(500);
+                    error(500);
                     continue;
                 }
                 size_t length = size - (needle - haystack + 4);
@@ -320,7 +320,7 @@ int main(int argc, char* argv[])
                 const char* type = lookup(extension);
                 if (type == NULL)
                 {
-                    err(501);
+                    error(501);
                     continue;
                 }
 
@@ -328,7 +328,7 @@ int main(int argc, char* argv[])
                 file = fopen(path, "r");
                 if (file == NULL)
                 {
-                    err(500);
+                    error(500);
                     continue;
                 }
 
@@ -336,7 +336,7 @@ int main(int argc, char* argv[])
                 ssize_t length = load();
                 if (length == -1)
                 {
-                    err(500);
+                    error(500);
                     continue;
                 }
 
@@ -395,7 +395,7 @@ bool connected(void)
 /**
  * Handles client errors (4xx) and server errors (5xx).
  */
-bool err(unsigned short code)
+bool error(unsigned short code)
 {
     // ensure client's socket is open
     if (cfd == -1)
@@ -497,14 +497,14 @@ ssize_t load(void)
     }
 
     // buffer for octets
-    OCTET buffer[OCTETS];
+    octet buffer[OCTETS];
 
     // read file
     ssize_t size = 0;
     while (true)
     {
         // try to read a buffer's worth of octets
-        ssize_t octets = fread(buffer, sizeof(OCTET), OCTETS, file);
+        ssize_t octets = fread(buffer, sizeof(octet), OCTETS, file);
 
         // check for error
         if (ferror(file) != 0)
@@ -632,17 +632,17 @@ ssize_t parse(void)
     }
 
     // buffer for octets
-    OCTET buffer[OCTETS];
+    octet buffer[OCTETS];
 
     // parse request
     ssize_t length = 0;
     while (true)
     {
         // read from socket
-        ssize_t octets = read(cfd, buffer, sizeof(OCTET) * OCTETS);
+        ssize_t octets = read(cfd, buffer, sizeof(octet) * OCTETS);
         if (octets == -1)
         {
-            err(500);
+            error(500);
             return -1;
         }
 
@@ -685,7 +685,7 @@ ssize_t parse(void)
         // then request is too large
         if (length - 1 >= LimitRequestLine + LimitRequestFields * LimitRequestFieldSize)
         {
-            err(413);
+            error(413);
             return -1;
         }
     }
