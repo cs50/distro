@@ -35,7 +35,7 @@ ssize_t load(void);
 const char* lookup(const char* extension);
 ssize_t parse(void);
 void reset(void);
-void start(unsigned short port, const char* path);
+void start(short port, const char* path);
 void stop(void);
 
 // server's root
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     errno = 0;
 
     // default to a random port
-    unsigned short port = 0;
+    short port = 0;
 
     // usage
     const char* usage = "Usage: server [-p port] [-q] /path/to/root";
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
     }
 
     // ensure path to server's root was specified
-    if (argv[optind] == NULL || strlen(argv[optind]) == 0)
+    if (port < 0 || argv[optind] == NULL || strlen(argv[optind]) == 0)
     {
         // announce usage
         printf("%s\n", usage);
@@ -718,7 +718,7 @@ void reset(void)
 /**
  * Starts server.
  */
-void start(unsigned short port, const char* path)
+void start(short port, const char* path)
 {
     // path to server's root
     root = realpath(path, NULL);
