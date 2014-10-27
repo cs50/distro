@@ -117,6 +117,7 @@ int main(int argc, char* argv[])
             }
 
             // extract request's Request-Line
+            // http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
             const char* haystack = request;
             char* needle = strstr(haystack, "\r\n");
             if (needle == NULL)
@@ -193,6 +194,7 @@ int main(int argc, char* argv[])
             }
 
             // ensure Request-URI is safe
+            // http://www.rfc-editor.org/rfc/rfc3986.txt
             if (strchr(uri, '"') != NULL)
             {
                 err(400);
@@ -714,7 +716,7 @@ void reset(void)
 }
 
 /**
- *
+ * Starts server.
  */
 void start(unsigned short port, const char* path)
 {
