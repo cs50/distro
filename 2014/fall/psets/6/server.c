@@ -258,7 +258,7 @@ int main(int argc, char* argv[])
                 err(501);
                 continue;
             }
-            char extension[strlen(needle)];
+            char extension[strlen(needle + 1) + 1];
             strcpy(extension, needle + 1);
 
             // dynamic content
@@ -487,15 +487,15 @@ ssize_t load(void)
         return -1;
     }
 
-    // growable buffer for octets
+    // buffer for octets
     OCTET buffer[OCTETS];
 
     // read file
-    size_t size = 0;
+    ssize_t size = 0;
     while (true)
     {
         // try to read a buffer's worth of octets
-        size_t octets = fread(buffer, sizeof(OCTET), OCTETS, file);
+        ssize_t octets = fread(buffer, sizeof(OCTET), OCTETS, file);
 
         // check for error
         if (ferror(file) != 0)
@@ -620,7 +620,7 @@ ssize_t parse(void)
         return -1;
     }
 
-    // growable buffer for octets
+    // buffer for octets
     OCTET buffer[OCTETS];
 
     // parse request
