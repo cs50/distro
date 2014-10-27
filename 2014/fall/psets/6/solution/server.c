@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            // ensure request's version is HTTP/1.1
+            // ensure HTTP-version is HTTP/1.1
             if (strcmp("HTTP/1.1", version) != 0)
             {
                 error(505);
