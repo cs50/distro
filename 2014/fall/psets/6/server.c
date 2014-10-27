@@ -3,13 +3,12 @@
 #define _XOPEN_SOURCE_EXTENDED
 
 // http://httpd.apache.org/docs/2.2/mod/core.html
-#define LimitRequestBody 102400
 #define LimitRequestFields 50
 #define LimitRequestFieldSize 4094
 #define LimitRequestLine 8190
 
-// block size
-#define BLOCK 512
+// number of octets to read when buffering
+#define OCTETS 512
 
 // header files
 #include <arpa/inet.h>
@@ -29,10 +28,11 @@ typedef char OCTET;
 
 // prototypes
 bool connected(void);
+bool err(unsigned short code);
 void handler(int signal);
+size_t load(void);
 const char* lookup(const char* extension);
-const OCTET* parse(void);
-bool respond(unsigned short code, ...);
+bool parse(void);
 void reset(void);
 void start(unsigned short port, const char* path);
 void stop(void);
@@ -43,8 +43,14 @@ char* root = NULL;
 // file descriptor for sockets
 int cfd = -1, sfd = -1;
 
+// buffer for request
+OCTET* request = NULL;
+
 // FILE pointer for files
 FILE* file = NULL;
+
+// buffer for response-body
+OCTET* body = NULL;
 
 int main(int argc, char* argv[])
 {
@@ -102,11 +108,9 @@ int main(int argc, char* argv[])
         // wait until client is connected
         if (connected())
         {
-            // parse client's HTTP request, omitting message-body
-            const OCTET* request = parse();
-            if (request == NULL)
+            // parse client's HTTP request
+            if (!parse())
             {
-                respond(500);
                 continue;
             }
 
@@ -115,12 +119,12 @@ int main(int argc, char* argv[])
             char* needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
-                respond(400);
+                err(400);
                 continue;
             }
             else if (needle - haystack + 2 > LimitRequestLine)
             {
-                respond(414);
+                err(414);
                 continue;
             }   
             char line[needle - haystack + 2 + 1];
@@ -135,7 +139,7 @@ int main(int argc, char* argv[])
             needle = strchr(haystack, ' ');
             if (needle == NULL)
             {
-                respond(400);
+                err(400);
                 continue;
             }
 
@@ -149,7 +153,7 @@ int main(int argc, char* argv[])
             needle = strchr(haystack, ' ');
             if (needle == NULL)
             {
-                respond(400);
+                err(400);
                 continue;
             }
 
@@ -163,7 +167,7 @@ int main(int argc, char* argv[])
             needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
-                respond(414);
+                err(414);
                 continue;
             }
 
@@ -175,21 +179,28 @@ int main(int argc, char* argv[])
             // ensure request's method is GET
             if (strcmp("GET", method) != 0)
             {
-                respond(405);
+                err(405);
                 continue;
             }
 
             // ensure Request-URI starts with abs_path
             if (uri[0] != '/')
             {
-                respond(501);
+                err(501);
+                continue;
+            }
+
+            // ensure Request-URI is safe
+            if (strchr(uri, '"') != NULL)
+            {
+                err(400);
                 continue;
             }
 
             // ensure request's version is HTTP/1.1
             if (strcmp("HTTP/1.1", version) != 0)
             {
-                respond(505);
+                err(505);
                 continue;
             }
 
@@ -224,14 +235,14 @@ int main(int argc, char* argv[])
             // ensure file exists
             if (access(path, F_OK) == -1)
             {
-                respond(404);
+                err(404);
                 continue;
             }
 
             // ensure file is readable
             if (access(path, R_OK) == -1)
             {
-                respond(403);
+                err(403);
                 continue;
             }
 
@@ -240,46 +251,120 @@ int main(int argc, char* argv[])
             needle = strrchr(haystack, '.');
             if (needle == NULL)
             {
-                respond(501);
+                err(501);
                 continue;
             }
             char extension[strlen(needle)];
             strcpy(extension, needle + 1);
 
-            // look up file's MIME type
-            const char* type = lookup(extension);
-            if (type == NULL)
+            // dynamic content
+            if (strcasecmp("php", extension) == 0)
             {
-                respond(501);
-                continue;
+                // open pipe to PHP interpreter
+                char* format = "php-cgi -f %s \"%s\"";
+                char command[strlen(format) + (strlen(path) - 2) + (strlen(query) - 2) + 1];
+                sprintf(command, format, path, query);
+                file = popen(command, "r");
+                if (file == NULL)
+                {
+                    err(500);
+                    continue;
+                }
+
+                // load file
+                size_t length = load();
+                if (length == -1)
+                {
+                    err(500);
+                    continue;
+                }
+
+                // close pipe
+                if (pclose(file) == -1)
+                {
+                    err(500);
+                    continue;
+                }
+    
+                // respond to client
+                if (dprintf(cfd, "HTTP/1.1 200 OK\r\n") < 0)
+                {
+                    continue;
+                }
+                if (dprintf(cfd, "Connection: close\r\n") < 0)
+                {
+                    continue;
+                }
+                if (dprintf(cfd, "Content-Length: %i\r\n", length) < 0)
+                {
+                    continue;
+                }
+                if (write(cfd, body, length) == -1)
+                {
+                    continue;
+                }
             }
 
-            // open file
-            file = fopen(path, "r");
-            if (file == NULL)
+            // static content
+            else
             {
-                respond(500);
-                continue;
+                // look up file's MIME type
+                const char* type = lookup(extension);
+                if (type == NULL)
+                {
+                    err(501);
+                    continue;
+                }
+
+                // open file
+                file = fopen(path, "r");
+                if (file == NULL)
+                {
+                    err(500);
+                    continue;
+                }
+
+                // load file
+                size_t length = load();
+                if (length == -1)
+                {
+                    err(500);
+                    continue;
+                }
+
+                // close file
+                if (fclose(file) == -1)
+                {
+                    err(500);
+                    continue;
+                }
+
+                // respond to client
+                if (dprintf(cfd, "HTTP/1.1 200 OK\r\n") < 0)
+                {
+                    continue;
+                }
+                if (dprintf(cfd, "Connection: close\r\n") < 0)
+                {
+                    continue;
+                }
+                if (dprintf(cfd, "Content-Length: %i\r\n", length) < 0)
+                {
+                    continue;
+                }
+                if (dprintf(cfd, "Content-Type: %s\r\n", type) < 0)
+                {
+                    continue;
+                }
+                if (dprintf(cfd, "\r\n") < 0)
+                {
+                    continue;
+                }
+                if (write(cfd, body, length) == -1)
+                {
+                    continue;
+                }
             }
-
-            /*
-            // determine file's length
-            off_t length = lseek(fd, 0, SEEK_END);
-            lseek(fd, 0, SEEK_SET);
-            */
-
-            /*
-            // read file into buffer
-            char buffer[length];
-            ssize_t n;
-            while ((n = read(fd, buffer, CAPACITY)) > 0) // TODO: check for error
-            {
-                write(cfd, buffer, n);
-            }
-
-            // respond to client
-            respond(200, length, type, NULL);
-            */
         }
     }
 }
@@ -298,6 +383,141 @@ bool connected(void)
         return false;
     }
     return true;
+}
+
+/**
+ * Handles 4xx and 5xx.
+ */
+bool err(unsigned short code)
+{
+    // ensure client's socket is open
+    if (cfd == -1)
+    {
+        return false;
+    }
+
+    // determine Status-Line's phrase
+    const char* phrase = NULL;
+    switch (code)
+    {
+        case 400: phrase = "Bad Request"; break;
+        case 403: phrase = "Forbidden"; break;
+        case 404: phrase = "Not Found"; break;
+        case 405: phrase = "Method Not Allowed"; break;
+        case 413: phrase = "Request Entity Too Large"; break;
+        case 414: phrase = "Request-URI Too Long"; break;
+        case 418: phrase = "I'm a teapot"; break;
+        case 500: phrase = "Internal Server Error"; break;
+        case 501: phrase = "Not Implemented"; break;
+        case 505: phrase = "HTTP Version Not Supported"; break;
+    }
+    if (phrase == NULL)
+    {
+        return false;
+    }
+
+    // template
+    char* template = "<html><head><title>%i %s</title></head><body><h1>%i %s</h1></body></html>";
+    char content[strlen(template) + 2 * ((int) log10(code) + 1 - 2) + 2 * (strlen(phrase) - 2) + 1];
+    int length = sprintf(content, template, code, phrase, code, phrase);
+
+    // respond with Status-Line
+    if (dprintf(cfd, "HTTP/1.1 %i %s\r\n", code, phrase) < 0)
+    {
+        return false;
+    }
+
+    // respond with Connection header
+    if (dprintf(cfd, "Connection: close\r\n") < 0)
+    {
+        return false;
+    }
+
+    // respond with Content-Length header
+    if (dprintf(cfd, "Content-Length: %i\r\n", length) < 0)
+    {
+        return false;
+    }
+
+    // respond with Content-Type header
+    if (dprintf(cfd, "Content-Type: text/html\r\n") < 0)
+    {
+        return false;
+    }
+
+    // respond with CRLF
+    if (dprintf(cfd, "\r\n") < 0)
+    {
+        return false;
+    }
+
+    // respond with message-body
+    if (write(cfd, content, length) == -1)
+    {
+        return false;
+    }
+
+    // log Response-Line
+    printf("\033[31m");
+    printf("%i %s\n", code, phrase);
+    printf("\033[39m");
+
+    return true;
+}
+
+/**
+ * Loads file into message-body.
+ */
+size_t load(void)
+{
+    // ensure file is open
+    if (file == NULL)
+    {
+        return -1;
+    }
+
+    // ensure body isn't already loaded
+    if (body != NULL)
+    {
+        return -1;
+    }
+
+    // growable buffer for octets
+    OCTET buffer[OCTETS];
+
+    // read file
+    size_t length = 0;
+    while (true)
+    {
+        // try to read a buffer's worth of octets
+        size_t octets = fread(buffer, sizeof(OCTET), sizeof(buffer), file);
+
+        // check for error
+        if (ferror(file) != 0)
+        {
+            if (body != NULL)
+            {
+                free(body);
+                body = NULL;
+            }
+            return -1;
+        }
+
+        // if octets were read, append to body
+        if (octets > 0)
+        {
+            body = realloc(body, length + octets);
+            memcpy(body, buffer, length);
+            length += octets;
+        }
+
+        // check for EOF
+        if (feof(file) != 0)
+        {
+            break;
+        }
+    }
+    return length;
 }
 
 /**
@@ -368,36 +588,45 @@ const char* lookup(const char* extension)
 }
 
 /**
- * Parses an HTTP request, returning Request-Line plus any headers plus one CRLF.
+ * Parses an HTTP request.
  */
-const char* parse(void)
+bool parse(void)
 {
     // ensure client's socket is open
     if (cfd == -1)
     {
-        return NULL;
+        return false;
     }
 
-    // number of bytes that will be allowed in an HTTP request
-    static char request[LimitRequestLine + LimitRequestFields * LimitRequestFieldSize + LimitRequestBody + 1];
+    // ensure request isn't already parsed
+    if (request != NULL)
+    {
+        return false;
+    }
 
-    // read request's headers
-    ssize_t length = 0;
+    // growable buffer for octets
+    OCTET buffer[OCTETS];
+
+    // parse request
+    ssize_t length = 1;
+    request = calloc(sizeof(OCTET), length);
     while (true)
     {
         // read from socket
-        ssize_t bytes = read(cfd, request + length, sizeof(request) - 1 - length);
-        if (bytes == -1)
+        ssize_t octets = read(cfd, buffer, sizeof(OCTET) * OCTETS);
+        if (octets == -1)
         {
-            respond(500);
-            return NULL;
+            err(500);
+            return false;
         }
 
-        // if bytes have been read, remember new length
-        if (bytes > 0)
+        // if octets have been read, remember new length
+        if (octets > 0)
         {
-            length += bytes;
-            request[length] = '\0';
+            request = realloc(request, length + octets);
+            (request + length, buffer, octets);
+            length += octets;
+            request[length - 1] = '\0';
         }
 
         // else if nothing's been read, socket's been closed
@@ -407,8 +636,8 @@ const char* parse(void)
         }
 
         // search for CRLF CRLF
-        int offset = (length - bytes < 3) ? length - bytes : 3;
-        char* haystack = request + length - bytes - offset;
+        int offset = (length - octets < 3) ? length - octets : 3;
+        char* haystack = request + length - octets - offset;
         char* needle = strstr(haystack, "\r\n\r\n");
         if (needle != NULL)
         {
@@ -419,15 +648,13 @@ const char* parse(void)
 
         // if buffer's full and we still haven't found CRLF CRLF,
         // then request is too large
-        if (length == sizeof(request) - 1)
+        if (length - 1 >= LimitRequestLine + LimitRequestFields * LimitRequestFieldSize)
         {
-            respond(413);
-            return NULL;
+            err(413);
+            return false;
         }
     }
-
-    // success
-    return request;
+    return true;
 }
 
 /**
@@ -435,6 +662,20 @@ const char* parse(void)
  */
 void reset(void)
 {
+    // free request
+    if (request != NULL)
+    {
+        free(request);
+        request = NULL;
+    }
+
+    // free response's body
+    if (body != NULL)
+    {
+        free(body);
+        body = NULL;
+    }
+
     // close file
     if (file != NULL)
     {
@@ -448,105 +689,6 @@ void reset(void)
         close(cfd);
         cfd = -1;
     }
-}
-
-/**
- * Responds to client.
- */
-bool error(unsigned short code, ...)
-//bool respond(unsigned short code, unsigned long long length, const char* type, OCTET* content)
-{
-    // ensure client's socket is open
-    if (cfd == -1)
-    {
-        return false;
-    }
-
-    // determine Status-Line's phrase
-    const char* phrase = NULL;
-    switch (code)
-    {
-        case 200: phrase = "OK"; break;
-        case 403: phrase = "Forbidden"; break;
-        case 404: phrase = "Not Found"; break;
-        case 405: phrase = "Method Not Allowed"; break;
-        case 413: phrase = "Request Entity Too Large"; break;
-        case 414: phrase = "Request-URI Too Long"; break;
-        case 418: phrase = "I'm a teapot"; break;
-        case 500: phrase = "Internal Server Error"; break;
-        case 501: phrase = "Not Implemented"; break;
-        case 505: phrase = "HTTP Version Not Supported"; break;
-    }
-    if (phrase == NULL)
-    {
-        return false;
-    }
-
-    // template for 
-    char* template = "<html><head><title>%i %s</title></head><body><h1>%i %s</h1></body></html>";
-    char buffer[strlen(template) + 2 * ((int) log10(code) + 1 - 2) + 2 * (strlen(phrase) - 2) + 1];
-
-    // variable arguments
-    unsigned long long length;
-    char* type;
-    OCTET* content;
-    if (code == 200)
-    {
-        va_list ap;
-        va_start(ap, code);
-        length = va_arg(ap, unsigned long long);
-        type = va_arg(ap, char*);
-        content = va_arg(ap, OCTET*);
-        va_end(ap);
-    }
-    else
-    {
-        length = sprintf(buffer, template, code, phrase, code, phrase);
-        printf("%s\n", buffer);
-        type = "text/html";
-        content = buffer;
-    }
-
-    // respond with Status-Line
-    if (dprintf(cfd, "HTTP/1.1 %i %s\r\n", code, phrase) < 0)
-    {
-        return false;
-    }
-
-    // respond with Connection header
-    if (dprintf(cfd, "Connection: close\r\n") < 0)
-    {
-        return false;
-    }
-    // respond with Content-Length header
-    if (dprintf(cfd, "Content-Length: %lld\r\n", length) < 0)
-    {
-        return false;
-    }
-
-    // respond with Content-Type header
-    if (dprintf(cfd, "Content-Type: %s\r\n", type) < 0)
-    {
-        return false;
-    }
-
-    // respond with CRLF
-    if (dprintf(cfd, "\r\n") < 0)
-    {
-        return false;
-    }
-
-    // respond with message-body
-    if (length > 0)
-    {
-        if (write(cfd, content, length) == -1)
-        {
-            return false;
-        }
-    }
-
-    // responded
-    return true;
 }
 
 /**
@@ -574,7 +716,9 @@ void start(unsigned short port, const char* path)
     }
 
     // announce root
+    printf("\033[33m");
     printf("Using %s for server's root\n", root);
+    printf("\033[39m");
 
     // create a socket
     sfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -611,7 +755,9 @@ void start(unsigned short port, const char* path)
     {
         stop();
     }
+    printf("\033[33m");
     printf("Listening on port %i\n", ntohs(addr.sin_port));
+    printf("\033[39m");
 }
 
 /**
@@ -646,7 +792,9 @@ void stop(void)
     else
     {
         // failure
+        printf("\033[33m");
         printf("%s\n", strerror(errsv));
+        printf("\033[39m");
         exit(1);
     }
 }
