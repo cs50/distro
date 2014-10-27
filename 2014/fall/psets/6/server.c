@@ -1,4 +1,5 @@
 // feature test macro requirements
+#define _GNU_SOURCE
 #define _XOPEN_SOURCE 700
 #define _XOPEN_SOURCE_EXTENDED
 
@@ -30,9 +31,9 @@ typedef char OCTET;
 bool connected(void);
 bool err(unsigned short code);
 void handler(int signal);
-size_t load(void);
+ssize_t load(void);
 const char* lookup(const char* extension);
-bool parse(void);
+ssize_t parse(void);
 void reset(void);
 void start(unsigned short port, const char* path);
 void stop(void);
@@ -109,7 +110,8 @@ int main(int argc, char* argv[])
         if (connected())
         {
             // parse client's HTTP request
-            if (!parse())
+            ssize_t octets = parse();
+            if (octets == -1)
             {
                 continue;
             }
@@ -261,9 +263,9 @@ int main(int argc, char* argv[])
             if (strcasecmp("php", extension) == 0)
             {
                 // open pipe to PHP interpreter
-                char* format = "php-cgi -f %s \"%s\"";
+                char* format = "QUERY_STRING=\"%s\" REDIRECT_STATUS=200 SCRIPT_FILENAME=\"%s\" php-cgi";
                 char command[strlen(format) + (strlen(path) - 2) + (strlen(query) - 2) + 1];
-                sprintf(command, format, path, query);
+                sprintf(command, format, query, path);
                 file = popen(command, "r");
                 if (file == NULL)
                 {
@@ -272,20 +274,23 @@ int main(int argc, char* argv[])
                 }
 
                 // load file
-                size_t length = load();
-                if (length == -1)
+                ssize_t size = load();
+                if (size == -1)
                 {
                     err(500);
                     continue;
                 }
 
-                // close pipe
-                if (pclose(file) == -1)
+                // subtract php-cgi's headers from body's size to get content's length
+                haystack = body;
+                needle = memmem(haystack, size, "\r\n\r\n", 4);
+                if (needle == NULL)
                 {
                     err(500);
                     continue;
                 }
-    
+                size_t length = size - (needle - haystack + 4);
+
                 // respond to client
                 if (dprintf(cfd, "HTTP/1.1 200 OK\r\n") < 0)
                 {
@@ -299,7 +304,7 @@ int main(int argc, char* argv[])
                 {
                     continue;
                 }
-                if (write(cfd, body, length) == -1)
+                if (write(cfd, body, size) == -1)
                 {
                     continue;
                 }
@@ -325,15 +330,8 @@ int main(int argc, char* argv[])
                 }
 
                 // load file
-                size_t length = load();
+                ssize_t length = load();
                 if (length == -1)
-                {
-                    err(500);
-                    continue;
-                }
-
-                // close file
-                if (fclose(file) == -1)
                 {
                     err(500);
                     continue;
@@ -365,6 +363,11 @@ int main(int argc, char* argv[])
                     continue;
                 }
             }
+            
+            // announce OK
+            printf("\033[32m");
+            printf("200 OK");
+            printf("\033[39m\n");
         }
     }
 }
@@ -457,10 +460,10 @@ bool err(unsigned short code)
         return false;
     }
 
-    // log Response-Line
+    // announce Response-Line
     printf("\033[31m");
-    printf("%i %s\n", code, phrase);
-    printf("\033[39m");
+    printf("%i %s", code, phrase);
+    printf("\033[39m\n");
 
     return true;
 }
@@ -468,7 +471,7 @@ bool err(unsigned short code)
 /**
  * Loads file into message-body.
  */
-size_t load(void)
+ssize_t load(void)
 {
     // ensure file is open
     if (file == NULL)
@@ -486,11 +489,11 @@ size_t load(void)
     OCTET buffer[OCTETS];
 
     // read file
-    size_t length = 0;
+    size_t size = 0;
     while (true)
     {
         // try to read a buffer's worth of octets
-        size_t octets = fread(buffer, sizeof(OCTET), sizeof(buffer), file);
+        size_t octets = fread(buffer, sizeof(OCTET), OCTETS, file);
 
         // check for error
         if (ferror(file) != 0)
@@ -506,9 +509,13 @@ size_t load(void)
         // if octets were read, append to body
         if (octets > 0)
         {
-            body = realloc(body, length + octets);
-            memcpy(body, buffer, length);
-            length += octets;
+            body = realloc(body, size + octets);
+            if (body == NULL)
+            {
+                return -1;
+            }
+            memcpy(body + size, buffer, octets);
+            size += octets;
         }
 
         // check for EOF
@@ -517,7 +524,7 @@ size_t load(void)
             break;
         }
     }
-    return length;
+    return size;
 }
 
 /**
@@ -528,7 +535,14 @@ void handler(int signal)
     // control-c
     if (signal == SIGINT)
     {
+        // ensure this isn't considered an error
+        // (as might otherwise happen after a recent 404)
+        errno = 0;
+
+        // announce stop
         printf("Stopping server\n");
+
+        // stop server
         stop();
     }
 }
@@ -590,26 +604,25 @@ const char* lookup(const char* extension)
 /**
  * Parses an HTTP request.
  */
-bool parse(void)
+ssize_t parse(void)
 {
     // ensure client's socket is open
     if (cfd == -1)
     {
-        return false;
+        return -1;
     }
 
     // ensure request isn't already parsed
     if (request != NULL)
     {
-        return false;
+        return -1;
     }
 
     // growable buffer for octets
     OCTET buffer[OCTETS];
 
     // parse request
-    ssize_t length = 1;
-    request = calloc(sizeof(OCTET), length);
+    ssize_t length = 0;
     while (true)
     {
         // read from socket
@@ -617,32 +630,41 @@ bool parse(void)
         if (octets == -1)
         {
             err(500);
-            return false;
+            return -1;
         }
 
         // if octets have been read, remember new length
         if (octets > 0)
         {
             request = realloc(request, length + octets);
-            (request + length, buffer, octets);
+            if (request == NULL)
+            {
+                return -1;
+            }
+            memcpy(request + length, buffer, octets);
             length += octets;
-            request[length - 1] = '\0';
         }
 
         // else if nothing's been read, socket's been closed
         else
         {
-            break;
+            return -1;
         }
 
         // search for CRLF CRLF
         int offset = (length - octets < 3) ? length - octets : 3;
         char* haystack = request + length - octets - offset;
-        char* needle = strstr(haystack, "\r\n\r\n");
+        char* needle = memmem(haystack, request + length - haystack, "\r\n\r\n", 4);
         if (needle != NULL)
         {
-            // trim one CRLF
-            *(needle + 2) = '\0';
+            // trim to one CRLF and null-terminate
+            length = needle - request + 2 + 1;
+            request = realloc(request, length);
+            if (request == NULL)
+            {
+                return -1;
+            }
+            request[length] = '\0';
             break;
         }
 
@@ -651,10 +673,10 @@ bool parse(void)
         if (length - 1 >= LimitRequestLine + LimitRequestFields * LimitRequestFieldSize)
         {
             err(413);
-            return false;
+            return -1;
         }
     }
-    return true;
+    return length;
 }
 
 /**
@@ -662,13 +684,6 @@ bool parse(void)
  */
 void reset(void)
 {
-    // free request
-    if (request != NULL)
-    {
-        free(request);
-        request = NULL;
-    }
-
     // free response's body
     if (body != NULL)
     {
@@ -681,6 +696,13 @@ void reset(void)
     {
         fclose(file);
         file = NULL;
+    }
+
+    // free request
+    if (request != NULL)
+    {
+        free(request);
+        request = NULL;
     }
 
     // close client's socket
@@ -717,8 +739,8 @@ void start(unsigned short port, const char* path)
 
     // announce root
     printf("\033[33m");
-    printf("Using %s for server's root\n", root);
-    printf("\033[39m");
+    printf("Using %s for server's root", root);
+    printf("\033[39m\n");
 
     // create a socket
     sfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -756,8 +778,8 @@ void start(unsigned short port, const char* path)
         stop();
     }
     printf("\033[33m");
-    printf("Listening on port %i\n", ntohs(addr.sin_port));
-    printf("\033[39m");
+    printf("Listening on port %i", ntohs(addr.sin_port));
+    printf("\033[39m\n");
 }
 
 /**
@@ -791,10 +813,12 @@ void stop(void)
     }
     else
     {
-        // failure
+        // announce error
         printf("\033[33m");
-        printf("%s\n", strerror(errsv));
-        printf("\033[39m");
+        printf("%s", strerror(errsv));
+        printf("\033[39m\n");
+
+        // failure
         exit(1);
     }
 }
