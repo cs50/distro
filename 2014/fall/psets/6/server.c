@@ -478,9 +478,9 @@ bool error(unsigned short code)
         return false;
     }
 
-    // announce Response-Line
+    // announce status-line
     printf("\033[31m");
-    printf("%i %s", code, phrase);
+    printf("HTTP/1.1 %i %s", code, phrase);
     printf("\033[39m\n");
 
     return true;
