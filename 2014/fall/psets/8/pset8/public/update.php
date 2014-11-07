@@ -1,6 +1,6 @@
 <?php
 
-    require("../includes/config.php");
+    require(__DIR__ . "/../includes/config.php");
 
     // ensure each parameter is in lat,lng format
     if (!preg_match("/^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/", $_GET["sw"]) ||

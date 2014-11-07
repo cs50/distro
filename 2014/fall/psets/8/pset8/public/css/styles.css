@@ -7,8 +7,6 @@
  * Global CSS.
  */
 
-/* ensure map fills viewport */
-
 /* allow map to fill viewport */
 html, body, #map-canvas, .container-fluid
 {

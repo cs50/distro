@@ -1,6 +1,6 @@
 <?php
 
-    require("../includes/config.php");
+    require(__DIR__ . "/../includes/config.php");
 
     // ensure proper usage
     if (empty($_GET["geo"]))

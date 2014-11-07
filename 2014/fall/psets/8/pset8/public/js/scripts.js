@@ -46,7 +46,7 @@ $(function() {
     // options for map
     // https://developers.google.com/maps/documentation/javascript/maptypes
     var options = {
-        center: { lat: 42.375892, lng: -71.114792 },
+        center: { lat: 42.375892, lng: -71.114792 }, // Cambridge, Massachusetts
         disableDefaultUI: true,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
         maxZoom: 14,
@@ -132,18 +132,22 @@ function addMarker(place)
 }
 
 /**
- * Configure application.
+ * Configures application.
  */
 function configure()
 {
     // update UI after map has been dragged
-    google.maps.event.addListener(map, "dragend", update);
+    google.maps.event.addListener(map, "dragend", function(eventObject) {
+        update();
+    });
 
     // update UI after zoom level changes
-    google.maps.event.addListener(map, "zoom_changed", update);
+    google.maps.event.addListener(map, "zoom_changed", function(eventObject) {
+        update();
+    });
 
     // remove markers whilst dragging
-    google.maps.event.addListener(map, "dragstart", function() {
+    google.maps.event.addListener(map, "dragstart", function(eventObject) {
         removeMarkers();
     });
 
@@ -161,25 +165,34 @@ function configure()
             empty: "no places found yet",
             suggestion: Handlebars.compile("<p>" +
                 "<span class='place_name'>{{place_name}}</span> <span class='postal_code'>{{postal_code}}</span>" +
-                "</p>") }
+                "</p>")
+        }
     });
 
-    // re-center map, update UI after place is selected
+    // re-center map and update UI after place is selected from drop-down
     $("#q").on("typeahead:selected", function(eventObject, suggestion, name) {
         map.setCenter({lat: suggestion.latitude, lng: suggestion.longitude});
         update();
     });
-
-    // give focus to text box
-    $("#q").focus();
 
     // hide info window when text box has focus
     $("#q").focus(function(eventData) {
         hideInfo();
     });
 
+    // re-enable ctrl- and right-clicking (and thus Inspect Element) on Google Map
+    // https://chrome.google.com/webstore/detail/allow-right-click/hompjdfbfmmmgflfjdlnkohcplmboaeo?hl=en
+    document.addEventListener("contextmenu", function(event) {
+        event.returnValue = true; 
+        event.stopPropagation && event.stopPropagation(); 
+        event.cancelBubble && event.cancelBubble();
+    }, true);
+
     // update UI
     update();
+
+    // give focus to text box
+    $("#q").focus();
 }
 
 /**
@@ -224,11 +237,11 @@ function search(query, cb)
 function showInfo(marker, content)
 {
     // start div
-    var div = "<div id=\"info\">";
+    var div = "<div id='info'>";
     if (typeof(content) === "undefined")
     {
         // http://www.ajaxload.info/
-        div += "<img alt=\"loading\" src=\"img/ajax-loader.gif\"/>";
+        div += "<img alt='loading' src='img/ajax-loader.gif'/>";
     }
     else
     {

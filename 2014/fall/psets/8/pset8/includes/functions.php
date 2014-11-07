@@ -9,7 +9,7 @@
      * Helper functions.
      */
 
-    require_once("constants.php");
+    require_once(__DIR__ . "/constants.php");
 
     /**
      * Executes SQL statement, possibly with parameters, returning
