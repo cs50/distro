@@ -28,7 +28,7 @@ $(function() {
             featureType: "all",
             elementType: "labels",
             stylers: [
-                { visibility: "off" }
+                {visibility: "off"}
             ]
         },
 
@@ -37,7 +37,7 @@ $(function() {
             featureType: "road",
             elementType: "geometry",
             stylers: [
-                { visibility: "off" }
+                {visibility: "off"}
             ]
         }
 
@@ -46,7 +46,7 @@ $(function() {
     // options for map
     // https://developers.google.com/maps/documentation/javascript/maptypes
     var options = {
-        center: { lat: 42.375892, lng: -71.114792 }, // Cambridge, Massachusetts
+        center: {lat: 42.375892, lng: -71.114792}, // Cambridge, Massachusetts
         disableDefaultUI: true,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
         maxZoom: 14,
@@ -89,7 +89,7 @@ function addMarker(place)
         showInfo(marker);
 
         // get articles for place (asynchronously)
-        $.getJSON("articles.php", { geo: place.postal_code }, function(data) {
+        $.getJSON("articles.php", {geo: place.postal_code}, function(data) {
 
             // if no data, no news
             if (data.length === 0)
@@ -100,29 +100,24 @@ function addMarker(place)
             // else build unordered list of links to articles
             else
             {
-                // instantiate unordered list
-                var ul = $("<ul>");
+                // start ul 
+                var ul = "<ul>";
+
+                // template for li
+                var template = _.template("<li><a href='<%- link %>' target='_blank'><%- title %></a></li>");
 
                 // iterate over articles
                 for (var i = 0; i < data.length; i++)
                 {
-                    // instantiate, configure anchor
-                    var a = $("<a>").text(data[i].title);
-                    a.attr("href", data[i].link);
-                    a.attr("target", "_blank");
-
-                    // instantiate list item
-                    var li = $("<li>");
-
-                    // append anchor to list item
-                    li.append(a);
-
-                    // append list item to unordered list
-                    ul.append(li);
+                    // add li to ul
+                    ul += template({link: data[i].link, title: data[i].title});
                 }
 
+                // end ul 
+                ul += "</ul>";
+
                 // show info window at marker with content
-                showInfo(marker, ul.get(0).outerHTML);
+                showInfo(marker, ul);
             }
         });
     });
@@ -163,8 +158,8 @@ function configure()
         source: search,
         templates: {
             empty: "no places found yet",
-            suggestion: Handlebars.compile("<p>" +
-                "<span class='place_name'>{{place_name}}</span> <span class='postal_code'>{{postal_code}}</span>" +
+            suggestion: _.template("<p>" +
+                "<span class='place_name'><%- place_name %></span> <span class='postal_code'><%- postal_code %></span>" +
                 "</p>")
         }
     });
