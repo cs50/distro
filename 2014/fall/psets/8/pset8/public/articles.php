@@ -1,0 +1,66 @@
+<?php
+
+    require("../includes/config.php");
+
+    // ensure proper usage
+    if (empty($_GET["geo"]))
+    {
+        http_response_code(400);
+        exit;
+    }
+
+    // escape user's input
+    $geo = urlencode($_GET["geo"]);
+
+    // (soon-to-be numerically indexed) array of articles
+    $articles = [];
+    
+    // headers for proxy servers
+    $headers = [
+        "Accept" => "*/*",
+        "Connection" => "Keep-Alive",
+        "User-Agent" => sprintf("curl/%s", curl_version()["version"])
+    ];
+
+    // download RSS from Google News
+    $context = stream_context_create([
+        "http" => [
+            "header" => implode(array_map(function($value, $key) { return sprintf("%s: %s\r\n", $key, $value); }, $headers, array_keys($headers))),
+            "method" => "GET"
+        ]
+    ]);
+    $contents = @file_get_contents("http://news.google.com/news?geo={$geo}&output=rss", false, $context);
+    if ($contents === false)
+    {
+        http_response_code(503);
+        exit;
+    }
+
+    // parse RSS
+    $rss = @simplexml_load_string($contents);
+    @fclose($handle);
+    if ($rss === false)
+    {
+        http_response_code(500);
+        exit;
+    }
+
+    // iterate over items in channel
+    foreach ($rss->channel->item as $item)
+    {
+        // associative array for article
+        $article = [];
+
+        // populate array with data from RSS feed
+        $article["link"] = (string) $item->link;
+        $article["title"] = (string) $item->title;
+
+        // add article to array
+        $articles[] = $article;
+    }
+
+    // output articles as JSON (pretty-printed for debugging convenience)
+    header("Content-type: application/json");
+    print(json_encode($articles, JSON_PRETTY_PRINT));
+
+?>
