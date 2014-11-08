@@ -24,14 +24,14 @@
     list($ne_lat, $ne_lng) = explode(",", $_GET["ne"]);
 
     // find 10 cities within view, pseudorandomly chosen if more within view
-    if ($sw_lng < $ne_lng)
+    if ($sw_lng <= $ne_lng)
     {
-        // northern hemisphere
+        // doesn't cross the antimeridian
         $rows = query("SELECT * FROM places WHERE ? <= latitude AND latitude <= ? AND (? <= longitude AND longitude <= ?) GROUP BY place_name ORDER BY RAND() LIMIT 10", $sw_lat, $ne_lat, $sw_lng, $ne_lng);
     }
     else
     {
-        // southern hemisphere
+        // crosses the antimeridian
         $rows = query("SELECT * FROM places WHERE ? <= latitude AND latitude <= ? AND (? <= longitude OR longitude <= ?) GROUP_BY place_name ORDER BY RAND() LIMIT 10", $sw_lat, $ne_lat, $sw_lng, $ne_lng);
     }
 
