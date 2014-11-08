@@ -44,9 +44,9 @@ $(function() {
     ];
 
     // options for map
-    // https://developers.google.com/maps/documentation/javascript/maptypes
+    // https://developers.google.com/maps/documentation/javascript/reference#MapOptions
     var options = {
-        center: {lat: 42.375892, lng: -71.114792}, // Cambridge, Massachusetts
+        center: {lat: 42.3770, lng: -71.1256}, // Cambridge, Massachusetts
         disableDefaultUI: true,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
         maxZoom: 14,
@@ -132,17 +132,17 @@ function addMarker(place)
 function configure()
 {
     // update UI after map has been dragged
-    google.maps.event.addListener(map, "dragend", function(eventObject) {
+    google.maps.event.addListener(map, "dragend", function() {
         update();
     });
 
     // update UI after zoom level changes
-    google.maps.event.addListener(map, "zoom_changed", function(eventObject) {
+    google.maps.event.addListener(map, "zoom_changed", function() {
         update();
     });
 
     // remove markers whilst dragging
-    google.maps.event.addListener(map, "dragstart", function(eventObject) {
+    google.maps.event.addListener(map, "dragstart", function() {
         removeMarkers();
     });
 
@@ -151,10 +151,9 @@ function configure()
     $("#q").typeahead({
         autoselect: true,
         highlight: true,
-        minLength: 2
+        minLength: 1
     },
     {
-        displayKey: "place_name",
         source: search,
         templates: {
             empty: "no places found yet",
@@ -211,7 +210,7 @@ function removeMarkers()
 }
 
 /**
- * Searches database.
+ * Searches database for typeahead's suggestions.
  */
 function search(query, cb)
 {
@@ -221,7 +220,7 @@ function search(query, cb)
     };
     $.getJSON("search.php", parameters, function(data) {
 
-        // call callback with data
+        // call typeahead's callback with search results (i.e., places)
         cb(data);       
     });
 }
@@ -254,7 +253,7 @@ function showInfo(marker, content)
 }
 
 /**
- * Updates UI.
+ * Updates UI's markers.
  */
 function update() 
 {

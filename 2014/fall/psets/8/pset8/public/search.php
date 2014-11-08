@@ -3,7 +3,7 @@
     require(__DIR__ . "/../includes/config.php");
 
     // ensure proper usage
-    if (empty($_GET["geo"]))
+    if (!isset($_GET["geo"]) || strlen($_GET["geo"]) === 0)
     {
         http_response_code(400);
         exit;

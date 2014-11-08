@@ -2,6 +2,13 @@
 
     require(__DIR__ . "/../includes/config.php");
 
+    // ensure proper usage
+    if (!isset($_GET["sw"], $_GET["ne"]))
+    {
+        http_response_code(400);
+        exit;
+    }
+
     // ensure each parameter is in lat,lng format
     if (!preg_match("/^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/", $_GET["sw"]) ||
         !preg_match("/^-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?$/", $_GET["ne"]))
@@ -17,8 +24,6 @@
     list($ne_lat, $ne_lng) = explode(",", $_GET["ne"]);
 
     // find 10 cities within view, pseudorandomly chosen if more within view
-    // http://stackoverflow.com/questions/4834772/get-all-records-from-mysql-database-that-are-within-google-maps-getbounds
-    // TODO: international date line too?
     if ($sw_lng < $ne_lng)
     {
         // northern hemisphere

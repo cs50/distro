@@ -48,15 +48,11 @@
     // iterate over items in channel
     foreach ($rss->channel->item as $item)
     {
-        // associative array for article
-        $article = [];
-
-        // populate array with data from RSS feed
-        $article["link"] = (string) $item->link;
-        $article["title"] = (string) $item->title;
-
         // add article to array
-        $articles[] = $article;
+        $articles[] = [
+            "link" => (string) $item->link,
+            "title" => (string) $item->title
+        ];
     }
 
     // output articles as JSON (pretty-printed for debugging convenience)

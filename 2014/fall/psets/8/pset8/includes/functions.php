@@ -37,7 +37,6 @@
             }
             catch (Exception $e)
             {
-                // trigger (big, orange) error
                 trigger_error($e->getMessage(), E_USER_ERROR);
                 exit;
             }
@@ -47,26 +46,20 @@
         $statement = $handle->prepare($sql);
         if ($statement === false)
         {
-            // trigger (big, orange) error
             trigger_error($handle->errorInfo()[2], E_USER_ERROR);
             exit;
         }
 
         // execute SQL statement
         $results = $statement->execute($parameters);
-
-        // return result set's rows, if any
-        if ($results !== false)
+        if ($results === false)
         {
-            return $statement->fetchAll(PDO::FETCH_ASSOC);
-        }
-        else
-        {
-            // TODO: handle errors better; returning false now because in pset7, didn't want registering the same email to trigger a big orange error
-            print_r($statement->errorInfo());
+            trigger_error($statement->errorInfo()[2], E_USER_ERROR);
             exit;
-            return false;
         }
+
+        // return result set's rows
+        return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
 ?>
