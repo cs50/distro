@@ -13,22 +13,10 @@
     $pat = $_GET["geo"] . "%";
 
     // select rows that match pattern
-    $rows = query("SELECT postal_code, place_name, latitude, longitude FROM places WHERE postal_code LIKE ? ORDER BY place_name", $pat);
-
-    // get places
-    $places = [];
-    foreach ($rows as $row)
-    {
-        $places[] = [
-            "postal_code" => $row["postal_code"],
-            "place_name" => $row["place_name"],
-            "latitude" => floatval($row["latitude"]),
-            "longitude" => floatval($row["longitude"])
-        ];
-    }
+    $rows = query("SELECT * FROM places WHERE MATCH(country_code,postal_code,place_name,admin_name1,admin_name2,admin_name3) AGAINST (? WITH QUERY EXPANSION) LIMIT 50", $pat);
 
     // output places as JSON (pretty-printed for debugging convenience)
     header("Content-type: application/json");
-    print(json_encode($places, JSON_PRETTY_PRINT));
+    print(json_encode($rows, JSON_PRETTY_PRINT));
 
 ?>

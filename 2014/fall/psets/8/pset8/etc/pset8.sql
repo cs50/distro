@@ -9,7 +9,8 @@ CREATE DATABASE IF NOT EXISTS  `pset8`;
 -- Table structure for table `places`
 --
 
-CREATE TABLE IF NOT EXISTS `places` (
+CREATE TABLE IF NOT EXISTS `pset8`.`places` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `country_code` char(2) NOT NULL,
   `postal_code` varchar(20) NOT NULL,
   `place_name` varchar(180) NOT NULL,
@@ -22,5 +23,5 @@ CREATE TABLE IF NOT EXISTS `places` (
   `latitude` decimal(7,4) NOT NULL,
   `longitude` decimal(7,4) NOT NULL,
   `accuracy` tinyint(4) NOT NULL,
-  KEY `postal_code` (`postal_code`)
-) ENGINE=InnoDB;
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM;

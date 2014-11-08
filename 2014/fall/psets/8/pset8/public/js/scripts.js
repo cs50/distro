@@ -89,7 +89,8 @@ function addMarker(place)
         showInfo(marker);
 
         // get articles for place (asynchronously)
-        $.getJSON("articles.php", {geo: place.postal_code}, function(data) {
+        $.getJSON("articles.php", {geo: place.postal_code})
+        .done(function(data, textStatus, jqXHR) {
 
             // if no data, no news
             if (data.length === 0)
@@ -119,6 +120,11 @@ function addMarker(place)
                 // show info window at marker with content
                 showInfo(marker, ul);
             }
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+
+            // log error to browser's console
+            console.log(errorThrown.toString());
         });
     });
 
@@ -158,14 +164,14 @@ function configure()
         templates: {
             empty: "no places found yet",
             suggestion: _.template("<p>" +
-                "<span class='place_name'><%- place_name %></span> <span class='postal_code'><%- postal_code %></span>" +
+                "<span class='place_name'><%- place_name %>, <%- admin_name1 %></span> <span class='postal_code'><%- postal_code %></span>" +
                 "</p>")
         }
     });
 
     // re-center map and update UI after place is selected from drop-down
     $("#q").on("typeahead:selected", function(eventObject, suggestion, name) {
-        map.setCenter({lat: suggestion.latitude, lng: suggestion.longitude});
+        map.setCenter({lat: parseFloat(suggestion.latitude), lng: parseFloat(suggestion.longitude)});
         update();
     });
 
@@ -218,10 +224,19 @@ function search(query, cb)
     var parameters = {
         geo: query
     };
-    $.getJSON("search.php", parameters, function(data) {
-
+    $.getJSON("search.php", parameters)
+    .done(function(data, textStatus, jqXHR) {
+        
         // call typeahead's callback with search results (i.e., places)
-        cb(data);       
+        cb(data);
+    })
+    .fail(function(jqXHR, textStatus, errorThrown) {
+
+        // log error to browser's console
+        console.log(errorThrown.toString());
+
+        // call typeahead's callback with no results
+        cb([]);
     });
 }
 
@@ -268,15 +283,21 @@ function update()
         q: $("#q").val(),
         sw: sw.lat() + "," + sw.lng()
     };
-    $.getJSON("update.php", parameters, function(data) {
+    $.getJSON("update.php", parameters)
+    .done(function(data, textStatus, jqXHR) {
 
-        // remove old markers from map
-        removeMarkers();
+       // remove old markers from map
+       removeMarkers();
 
-        // add new markers to map
-        for (var i = 0; i < data.length; i++)
-        {
-            addMarker(data[i]);
-        }
+       // add new markers to map
+       for (var i = 0; i < data.length; i++)
+       {
+           addMarker(data[i]);
+       }
+    })
+    .fail(function(jqXHR, textStatus, errorThrown) {
+
+        // log error to browser's console
+        console.log(errorThrown.toString());
     });
 };
