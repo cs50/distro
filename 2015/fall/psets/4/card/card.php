@@ -8,6 +8,10 @@
     }
 
     // open outfile
+    if (!preg_match("/\.raw$/i", $argv[1]))
+    {
+        die("outfile must end in .raw\n");
+    }
     $outfile = fopen($argv[1], "wb");
 
     // write a block of all 0s to outfile
@@ -32,8 +36,10 @@
     {
         if (preg_match("/\.(jpg|jpeg)$/i", $file))
         {
-            $size = filesize($file);
-            $infile = fopen($file, "rb");
+            $temp = tempnam(sys_get_temp_dir(), "");
+            system(escapeshellcmd("convert {$file} -strip {$temp}"));
+            $size = filesize($temp);
+            $infile = fopen($temp, "rb");
             $contents = fread($infile, $size);
             fclose($infile);
             fwrite($outfile, $contents, $size);
@@ -41,12 +47,11 @@
             {
                 fwrite($outfile, chr(0));
             }
-            printf("$i\n");
-            print("Wrote '{$file}'.\n");
+            print("Wrote {$file}.\n");
         }
         else
         {
-            print("Skipped '{$file}'.\n");
+            print("Skipped {$file}.\n");
         }
     }
 
