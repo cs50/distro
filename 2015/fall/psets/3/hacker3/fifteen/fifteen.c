@@ -55,9 +55,6 @@ int main(int argc, string argv[])
         return 1;
     }
 
-    // greet user with instructions
-    greet();
-
     // ensure valid dimensions
     d = atoi(argv[1]);
     if (d < DIM_MIN || d > DIM_MAX)
@@ -66,6 +63,9 @@ int main(int argc, string argv[])
             DIM_MIN, DIM_MIN, DIM_MAX, DIM_MAX);
         return 2;
     }
+
+    // greet user with instructions
+    greet();
 
     // initialize the board
     init();

@@ -52,12 +52,12 @@ int d;
 
 
 // prototypes
-void clear();
-void greet();
-void init();
-void draw();
-bool move();
-bool won();
+void clear(void);
+void greet(void);
+void init(void);
+void draw(void);
+bool move(int tile);
+bool won(void);
 
 int	get_direction (int tile_id); /* returns a direction constant */
 void	make_move (int tile_id, int direction); /* moves the given tile */
@@ -70,9 +70,6 @@ void    set_tile (int row, int col, int tile_id); /* set row, col to tile_id */
 int
 main(int argc, char * argv[])
 {
-    // greet user with instructions
-    greet();
-
     // ensure proper usage
     if (argc != 2)
     {
@@ -89,6 +86,16 @@ main(int argc, char * argv[])
         return 2;
     }
 
+    // greet user with instructions
+    greet();
+
+    // open log
+    FILE* file = fopen("log.txt", "w");
+    if (file == NULL)
+    {
+        return 3;
+    }
+
     // initialize the board
     init();
 
@@ -101,6 +108,21 @@ main(int argc, char * argv[])
         // draw the current state of the board
         draw();
 
+        // log the current state of the board (for testing)
+        for (int i = 0; i < d; i++)
+        {
+            for (int j = 0; j < d; j++)
+            {
+                fprintf(file, "%i", board[i][j]);
+                if (j < d - 1)
+                {
+                    fprintf(file, "|");
+                }
+            }
+            fprintf(file, "\n");
+        }
+        fflush(file);
+
         // check for win
         if (won())
         {
@@ -112,6 +134,16 @@ main(int argc, char * argv[])
         printf("Tile to move: ");
         int tile = GetInt();
 
+        // quit if user inputs 0 (for testing)
+        if (tile == 0)
+        {
+            break;
+        }
+
+        // log move (for testing)
+        fprintf(file, "%i\n", tile);
+        fflush(file);
+
         // move if possible, else report illegality
         if (!move(tile))
         {
@@ -122,6 +154,12 @@ main(int argc, char * argv[])
         // sleep thread for animation's sake
         // usleep(500000);
     }
+
+    // close log
+    fclose(file);
+
+    // success
+    return 0;
 }
 
 
@@ -475,4 +513,3 @@ won()
 	/* Execution will never reach here. */
 	return false;
 }
-
