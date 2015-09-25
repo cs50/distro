@@ -39,40 +39,47 @@
 
 /* Special values */
 
-/* Input sentinel for end of game */
+// Input sentinel for end of game
 #define	SENTINEL -1
 
-/* Error value for specified tile not found on board */
+// Error value for specified tile not found on board
 #define	TILE_NOT_FOUND -1
 
-
-/* global board */
+// board
 int board[DIM_MAX][DIM_MAX];
-int d;
 
+// dimensions
+int d;
 
 // prototypes
 void clear();
 void greet();
 void init();
 void draw();
-bool move();
+bool move(int);
 bool won();
 
-int	get_direction (int tile_id); /* returns a direction constant */
-void	make_move (int tile_id, int direction); /* moves the given tile */
-int	get_col (int tile_id); /* returns the column containing a tile */
-int	get_row (int tile_id); /* returns the row containing a tile */
-int     get_tile (int row, int col); /* get the tile at position row, col */
-void    set_tile (int row, int col, int tile_id); /* set row, col to tile_id */
+// returns a direction constant
+int	get_direction(int tile_id);
+
+// moves the given tile
+void make_move(int tile_id, int direction);
+
+// returns the column containing a tile
+int	get_col(int tile_id);
+
+// returns the row containing a tile
+int	get_row(int tile_id);
+
+// get the tile at position row, col
+int get_tile(int row, int col);
+
+// set row, col to tile_id
+void set_tile(int row, int col, int tile_id);
 
 
-int
-main(int argc, char * argv[])
+int main(int argc, char * argv[])
 {
-    // greet user with instructions
-    greet();
-
     // ensure proper usage
     if (argc != 2)
     {
@@ -88,6 +95,9 @@ main(int argc, char * argv[])
                DIM_MIN, DIM_MIN, DIM_MAX, DIM_MAX);
         return 2;
     }
+
+    // greet user with instructions
+    greet();
 
     // initialize the board
     init();
@@ -116,7 +126,7 @@ main(int argc, char * argv[])
         if (!move(tile))
         {
             printf("\nIllegal move.\n");
-	    usleep(500000);
+            usleep(500000);
         }
 
         // sleep thread for animation's sake
@@ -125,30 +135,22 @@ main(int argc, char * argv[])
 }
 
 
-/*
- * void
- * clear()
- *
+/**
  * Clears screen using ANSI escape sequences.
  */
 
-void
-clear()
+void clear()
 {
     printf("\033[2J");
     printf("\033[%d;%dH", 0, 0);
 }
 
 
-/*
- * void
- * greet()
- *
+/**
  * Greets player.
  */
 
-void
-greet()
+void greet()
 {
     clear();
     printf("WELCOME TO THE GAME OF FIFTEEN\n");
@@ -156,92 +158,91 @@ greet()
 }
 
 
-/*
- * void
- * init()
- *
+/**
  * Initializes the game's board with tiles (numbered 1 through d*d - 1),
  * i.e., fills 2D array with values but does not actually print them).  
  */
 
-void
-init()
+void init()
 {
-    	int i, j;
-	int counter = d * d;
+    int i, j;
+    int counter = d * d;
 
-	/* Initialize the board for the normal cases. */
-	for (i = 0; i < d; i++) {
-		for (j = 0; j < d; j++) {
-			set_tile(i, j, --counter);
-		}
-	}
+    // Initialize the board for the normal cases.
+    for (i = 0; i < d; i++)
+    {
+        for (j = 0; j < d; j++)
+        {
+            set_tile(i, j, --counter);
+        }
+    }
 
-	set_tile(d - 1, d - 1, BLANK);
+    set_tile(d - 1, d - 1, BLANK);
 
-	/* Swap the 1 and 2 tiles if the dimension is even. */
-	if (d % 2 == 0) {
-                set_tile(d - 1, d - 3, 1);
-                set_tile(d - 1, d - 2, 2);
-	}
+    // Swap the 1 and 2 tiles if the dimension is even.
+    if (d % 2 == 0)
+    {
+        set_tile(d - 1, d - 3, 1);
+        set_tile(d - 1, d - 2, 2);
+    }
 }
 
 
-/* 
- * void
- * draw()
- *
+/**
  * Prints the board in its current state.
  */
 
-void
-draw()
+void draw()
 {
-    	int i, j;
+    int i, j;
 
-	printf("\n");
+    printf("\n");
 
-	for (i = 0; i < d; i++) {
-		printf(" ");
-		for (j = 0; j < d; j++) {	
-			if (get_tile(i, j) == BLANK) {
-				printf("%3c", '_');
-			} else {
-				printf("%3d", get_tile(i, j));
+    for (i = 0; i < d; i++)
+    {   
+        printf(" ");
+
+        for (j = 0; j < d; j++)
+        {	
+            if (get_tile(i, j) == BLANK)
+            {
+                printf("%3c", '_');
+			}
+            else
+            {
+                printf("%3d", get_tile(i, j));
 			}
 		}
-		printf("\n\n");
+
+        printf("\n\n");
 	}
 }
 
 
-/* 
- * bool
- * move(int tile)
- *
+/** 
  * If tile borders empty space, moves tile and returns true, else
  * returns false. 
  */
 
-bool
-move(int tile_id)
+bool move(int tile_id)
 {
     int direction;
 
     direction = get_direction(tile_id);
-	      if (direction != ILLEGAL) {
-			make_move (tile_id, direction);
-			return true;
-		} else {
-		  //printf ("\nIllegal move!  Try again.\n");
-			return false;
-		}  
+
+    if (direction != ILLEGAL)
+    {
+        make_move (tile_id, direction);
+        return true;
+    }
+    else
+    {
+        return false;
+    }  
 }
 
 
-/* ------------------------------------------------------------------------- */
-/* get_direction
- * -------------
+/**
  * Arguments: 	None
  * Return: 	Direction of tile movement
  * Input: 	None   
@@ -253,45 +254,58 @@ move(int tile_id)
  *     legal move exists for that tile.
  */
 
-int get_direction (int tile_id)
+int get_direction(int tile_id)
 {
-	int p_row, p_col;       /* coordinates of the piece to be moved */
-        int b_row, b_col;       /* coordinates of the blank */
+    // coordinates of the piece to be moved
+    int p_row, p_col;
+    
+    // coordinates of the blank
+    int b_row, b_col;
 
+    
+    // Make sure the tile is in bounds.
+    if ((tile_id <= 0) || (tile_id >= d * d))
+    {
+        return ILLEGAL;
+    }
 
-	/* Make sure the tile is in bounds. */
-	if ((tile_id <= 0) || (tile_id >= d * d))
-		return ILLEGAL;
+    // Locate the tile and the blank.
+    p_row = get_row(tile_id);
+    p_col = get_col(tile_id);
+    b_row = get_row(BLANK);
+    b_col = get_col(BLANK);
 
-	/* Locate the tile and the blank. */
-	p_row = get_row(tile_id);
-	p_col = get_col(tile_id);
-	b_row = get_row(BLANK);
-	b_col = get_col(BLANK);
-
-	/* Make sure that the tile was found on the board. */
-	if ((p_row == TILE_NOT_FOUND) || (p_col == TILE_NOT_FOUND) || 
-	    (b_row == TILE_NOT_FOUND) || (b_col == TILE_NOT_FOUND)) {
-		return ILLEGAL;
+    // Make sure that the tile was found on the board. 
+    if ((p_row == TILE_NOT_FOUND) || (p_col == TILE_NOT_FOUND) || 
+        (b_row == TILE_NOT_FOUND) || (b_col == TILE_NOT_FOUND))
+    {
+        return ILLEGAL;
 	}
 
-	/* Determine the move direction. */
-	if ((p_row == b_row + 1) && (p_col == b_col)) {
-		return UP;
-	} else if ((p_row == b_row - 1) && (p_col == b_col)) {
-		return DOWN;
-	} else if ((p_row == b_row) && (p_col == b_col - 1)) {
-		return RIGHT;
-	} else if ((p_row == b_row) && (p_col == b_col + 1)) {
-		return LEFT;
-	} else {
-		return ILLEGAL;
+    // Determine the move direction.
+    if ((p_row == b_row + 1) && (p_col == b_col))
+    {
+        return UP;
+	}
+    else if ((p_row == b_row - 1) && (p_col == b_col))
+    {
+        return DOWN;
+	}
+    else if ((p_row == b_row) && (p_col == b_col - 1))
+    {
+        return RIGHT;
+	}
+    else if ((p_row == b_row) && (p_col == b_col + 1))
+    {
+        return LEFT;
+	}
+    else
+    {
+        return ILLEGAL;
 	}
 }
 
-/* ------------------------------------------------------------------------ */ 
-/* make_move
- * ---------
+/**
  * Arguments: 	Tile to move, direction to move
  * Return: 	Void
  * Input: 	None   
@@ -305,40 +319,39 @@ int get_direction (int tile_id)
  *     determined by get_direction.
  */
 
-void make_move (int tile_id, int direction) 
+void make_move(int tile_id, int direction)
 {
-        /* coordinates of the tile to be moved */
-	int row, col; 
+    // coordinates of the tile to be moved
+    int row, col; 
 
-	/* Find the tile. */
-	row = get_row(tile_id);
-	col = get_col(tile_id);
+    // Find the tile.
+    row = get_row(tile_id);
+    col = get_col(tile_id);
 
-	/* Set the blank to (row, col). */
-	set_tile(row, col, BLANK);
+    // Set the blank to (row, col).
+    set_tile(row, col, BLANK);
 
-	/* Move the tile onto the blank. */
-	switch(direction) {
-		case LEFT:
-			set_tile(row, col - 1, tile_id);
-			break;
-		case RIGHT:
-			set_tile(row, col + 1, tile_id);
-			break;
-		case UP:
-			set_tile(row - 1, col, tile_id);
-			break;
-		case DOWN:
-			set_tile(row + 1, col, tile_id);
-			break;
-		default:
-			break;
+    // Move the tile onto the blank.
+    switch (direction)
+    {
+        case LEFT:
+            set_tile(row, col - 1, tile_id);
+            break;
+        case RIGHT:
+            set_tile(row, col + 1, tile_id);
+            break;
+        case UP:
+            set_tile(row - 1, col, tile_id);
+            break;
+        case DOWN:
+            set_tile(row + 1, col, tile_id);
+            break;
+        default:
+            break;
 	}
 }
 
-/* ------------------------------------------------------------------------ */ 
-/* get_col
- * -------
+/**
  * Arguments: 	Tile to obtain column of
  * Return: 	Column number
  * Input: 	None   
@@ -348,25 +361,26 @@ void make_move (int tile_id, int direction)
  *     Returns the column index of the given tile_id. 
  */
 
-int get_col (int tile_id)
+int get_col(int tile_id)
 {
-	int i, j;
+    int i, j;
 
-	for (i = 0; i < d; i++) {
-		for (j = 0; j < d; j++) {
-			if (get_tile(i, j) == tile_id) {
-				return j;
+    for (i = 0; i < d; i++)
+    {
+        for (j = 0; j < d; j++)
+        {
+            if (get_tile(i, j) == tile_id)
+            {
+                return j;
 			}
 		}
 	}
 
-	/* Tile wasn't found, return error value. */
-	return TILE_NOT_FOUND;
+    // Tile wasn't found, return error value.
+    return TILE_NOT_FOUND;
 }
 
-/* ------------------------------------------------------------------------- */
-/* get_row
- * -------
+/**
  * Arguments: 	Tile to obtain row of
  * Return: 	Row number
  * Input: 	None   
@@ -376,25 +390,26 @@ int get_col (int tile_id)
  *     Returns the row index of the given tile_id. 
  */
 
-int	get_row (int tile_id)
+int get_row(int tile_id)
 {
-	int i, j;
+    int i, j;
 
-	for (i = 0; i < d; i++) {
-		for (j = 0; j < d; j++) {
-			if (get_tile(i, j) == tile_id) {
-				return i;
+    for (i = 0; i < d; i++)
+    {
+        for (j = 0; j < d; j++)
+        {
+            if (get_tile(i, j) == tile_id)
+            {
+                return i;
 			}
 		}
 	}
 
-	/* Tile wasn't found, return error value. */
-	return TILE_NOT_FOUND;
+    // Tile wasn't found, return error value.
+    return TILE_NOT_FOUND;
 }
 
-/* ------------------------------------------------------------------------- */
-/* get_tile
- * -------
+/**
  * Arguments: 	row and column to retrieve the tile of
  * Return: 	Tile at (row, col)
  * Input: 	None   
@@ -405,14 +420,12 @@ int	get_row (int tile_id)
  *     checking.
  */
 
-int     get_tile (int row, int col)
+int get_tile(int row, int col)
 {
     return board[row][col];
 }
 
-/* ------------------------------------------------------------------------- */
-/* set_tile
- * -------
+/**
  * Arguments: 	row and col to set to tile_id
  * Return: 	None
  * Input: 	None   
@@ -421,58 +434,56 @@ int     get_tile (int row, int col)
  * Description:
  *      Set row, col of the board to tile_id
  */
-void    set_tile (int row, int col, int tile_id)
+
+void set_tile(int row, int col, int tile_id)
 {
     board[row][col] = tile_id;
 }
 
-
-
-
-
-
-/*
- * bool
- * won()
- *
+/**
  * Returns true if game is won (i.e., board is in winning configuration), 
  * else false.
  */
 
-bool
-won()
+bool won()
 {
-        int i, j;
-        int counter = 1;
-        int num_tiles = d * d;
+    int i, j;
+    int counter = 1;
+    int num_tiles = d * d;
 	
-        /* The lower right hand corner must be the blank. */
-	if (get_tile(d - 1, d - 1) != BLANK)
-		return false;
+    // The lower right hand corner must be the blank.
+    if (get_tile(d - 1, d - 1) != BLANK)
+    {
+        return false;
+    }
 
-	/* Loop through all spaces on the board assuring they are correct. */
-	for (i = 0; i < d; i++) {
-		for (j = 0; j < d; j++) {
+    // Loop through all spaces on the board assuring they are correct.
+    for (i = 0; i < d; i++)
+    {
+        for (j = 0; j < d; j++)
+        {
 		
-			/* 
-			 * If the counter is equal to the number of tiles,
-			 * then all tiles have been checked except for the
-			 * blank, which was checked earlier --> victory.
-			 * Otherwise, a tile that's not equal to
-			 * the counter is reach, and that tile must
-                         * be out of place --> no victory
-			 */
-			if (counter == num_tiles) {
-				return true;
-			} else if (get_tile(i, j) != counter) {
-				return false;
-			} 
-	
-			counter++;
+            /**
+            * If the counter is equal to the number of tiles,
+            * then all tiles have been checked except for the
+            * blank, which was checked earlier --> victory.
+            * Otherwise, a tile that's not equal to
+            * the counter is reach, and that tile must
+            * be out of place --> no victory
+            */
+            if (counter == num_tiles)
+            {
+                return true;
+			}
+            else if (get_tile(i, j) != counter)
+            {
+                return false;
+			}
+
+            counter++;
 		}
 	}
 
-	/* Execution will never reach here. */
-	return false;
+    // Execution will never reach here.
+    return false;
 }
-
