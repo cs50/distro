@@ -29,9 +29,12 @@
 #define DIM_MAX 9
 
 
-// global board
+// board
 int board[DIM_MAX][DIM_MAX];
+
+// dimensions
 int d;
+
 int e_i, e_j;
 
 // prototypes

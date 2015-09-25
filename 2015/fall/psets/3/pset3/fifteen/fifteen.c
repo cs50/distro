@@ -52,12 +52,12 @@ int board[DIM_MAX][DIM_MAX];
 int d;
 
 // prototypes
-void clear();
-void greet();
-void init();
-void draw();
-bool move(int);
-bool won();
+void clear(void);
+void greet(void);
+void init(void);
+void draw(void);
+bool move(int tile);
+bool won(void);
 
 // returns a direction constant
 int	get_direction(int tile_id);
@@ -78,7 +78,7 @@ int get_tile(int row, int col);
 void set_tile(int row, int col, int tile_id);
 
 
-int main(int argc, char * argv[])
+int main(int argc, string argv[])
 {
     // ensure proper usage
     if (argc != 2)
@@ -241,8 +241,57 @@ bool move(int tile_id)
     }  
 }
 
-
 /**
+ * Returns true if game is won (i.e., board is in winning configuration), 
+ * else false.
+ */
+
+bool won()
+{
+    int i, j;
+    int counter = 1;
+    int num_tiles = d * d;
+    
+    // The lower right hand corner must be the blank.
+    if (get_tile(d - 1, d - 1) != BLANK)
+    {
+        return false;
+    }
+
+    // Loop through all spaces on the board assuring they are correct.
+    for (i = 0; i < d; i++)
+    {
+        for (j = 0; j < d; j++)
+        {
+        
+            /**
+            * If the counter is equal to the number of tiles,
+            * then all tiles have been checked except for the
+            * blank, which was checked earlier --> victory.
+            * Otherwise, a tile that's not equal to
+            * the counter is reach, and that tile must
+            * be out of place --> no victory
+            */
+            if (counter == num_tiles)
+            {
+                return true;
+            }
+            else if (get_tile(i, j) != counter)
+            {
+                return false;
+            }
+
+            counter++;
+        }
+    }
+
+    // Execution will never reach here.
+    return false;
+}
+
+/* ------------------------------------------------------------------------- */
+/* get_direction
+ * -------------
  * Arguments: 	None
  * Return: 	Direction of tile movement
  * Input: 	None   
@@ -440,50 +489,3 @@ void set_tile(int row, int col, int tile_id)
     board[row][col] = tile_id;
 }
 
-/**
- * Returns true if game is won (i.e., board is in winning configuration), 
- * else false.
- */
-
-bool won()
-{
-    int i, j;
-    int counter = 1;
-    int num_tiles = d * d;
-	
-    // The lower right hand corner must be the blank.
-    if (get_tile(d - 1, d - 1) != BLANK)
-    {
-        return false;
-    }
-
-    // Loop through all spaces on the board assuring they are correct.
-    for (i = 0; i < d; i++)
-    {
-        for (j = 0; j < d; j++)
-        {
-		
-            /**
-            * If the counter is equal to the number of tiles,
-            * then all tiles have been checked except for the
-            * blank, which was checked earlier --> victory.
-            * Otherwise, a tile that's not equal to
-            * the counter is reach, and that tile must
-            * be out of place --> no victory
-            */
-            if (counter == num_tiles)
-            {
-                return true;
-			}
-            else if (get_tile(i, j) != counter)
-            {
-                return false;
-			}
-
-            counter++;
-		}
-	}
-
-    // Execution will never reach here.
-    return false;
-}
