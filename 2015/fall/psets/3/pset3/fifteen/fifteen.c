@@ -99,6 +99,13 @@ int main(int argc, string argv[])
     // greet user with instructions
     greet();
 
+    // open log
+    FILE* file = fopen("log.txt", "w");
+    if (file == NULL)
+    {
+        return 3;
+    }
+
     // initialize the board
     init();
 
@@ -111,6 +118,21 @@ int main(int argc, string argv[])
         // draw the current state of the board
         draw();
 
+        // log the current state of the board (for testing)
+        for (int i = 0; i < d; i++)
+        {
+            for (int j = 0; j < d; j++)
+            {
+                fprintf(file, "%i", board[i][j]);
+                if (j < d - 1)
+                {
+                    fprintf(file, "|");
+                }
+            }
+            fprintf(file, "\n");
+        }
+        fflush(file);
+
         // check for win
         if (won())
         {
@@ -122,6 +144,16 @@ int main(int argc, string argv[])
         printf("Tile to move: ");
         int tile = GetInt();
 
+        // quit if user inputs 0 (for testing)
+        if (tile == 0)
+        {
+            break;
+        }
+
+        // log move (for testing)
+        fprintf(file, "%i\n", tile);
+        fflush(file);
+
         // move if possible, else report illegality
         if (!move(tile))
         {
@@ -132,6 +164,12 @@ int main(int argc, string argv[])
         // sleep thread for animation's sake
         // usleep(500000);
     }
+
+    // close log
+    fclose(file);
+
+    // success
+    return 0;
 }
 
 
@@ -488,4 +526,3 @@ void set_tile(int row, int col, int tile_id)
 {
     board[row][col] = tile_id;
 }
-
