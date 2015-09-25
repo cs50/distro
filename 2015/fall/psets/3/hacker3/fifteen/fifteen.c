@@ -28,7 +28,6 @@
 #define DIM_MIN 3
 #define DIM_MAX 9
 
-
 // board
 int board[DIM_MAX][DIM_MAX];
 
@@ -123,7 +122,6 @@ int main(int argc, string argv[])
 /**
  * Clears screen using ANSI escape sequences.
  */
-
 void clear()
 {
     printf("\033[2J");
@@ -133,17 +131,16 @@ void clear()
 /**
  * Greets player.
  */
-
 void greet()
 {
     clear();
-    printf("WELCOME TO THE GAME OF 15\n");
+    printf("WELCOME TO GAME OF FIFTEEN\n");
+    usleep(2000000);
 }
 
 /**
  * Sorts numbers.
  */
-
 void q_sort(double numbers[], int sub[], int left, int right)
 {
     double pivot;
@@ -196,8 +193,6 @@ void q_sort(double numbers[], int sub[], int left, int right)
         q_sort(numbers, sub, pivot + 1, right);
     }
 }
-
-
 void quickSort(double numbers[], int sub[], int array_size)
 {
     q_sort(numbers, sub, 0, array_size - 1);
@@ -206,7 +201,6 @@ void quickSort(double numbers[], int sub[], int array_size)
 /**
  * Returns 1 if solvable, else 0.
  */
-
 int solvable(int tiles[])
 {
     int inv = 0;
@@ -227,12 +221,10 @@ int solvable(int tiles[])
     return (inv % 2 == 0);
 }
 
-
 /**
  * Initializes the game's board with tiles (numbered 1 through d*d - 1),
  * i.e., fills 2D array with values but does not actually print them).  
  */
-
 void init()
 {
     int i, j;
@@ -263,7 +255,6 @@ void init()
 /**
  * Prints the board in its current state.
  */
-
 void draw()
 {
     int i, j;
@@ -307,7 +298,6 @@ void draw()
  * If tile borders empty space, moves tile and returns true, else
  * returns false. 
  */
-
 bool move(int tile)
 {
     // look up
@@ -333,7 +323,6 @@ bool move(int tile)
             return true;
         }
     }
-
 
     // look left
     if (e_j != 0)
@@ -362,19 +351,17 @@ bool move(int tile)
     return false;
 }
 
-
 /**
  * Returns true if game is won (i.e., board is in winning configuration), 
  * else false.
  */
-
 bool won(int off)
 {
     int ii;
     int i, j;
     int prev = -99999;
     int d2 = d - off;
-    for(ii = 0; ii < d2 * d2 - 1; ii++)
+    for (ii = 0; ii < d2 * d2 - 1; ii++)
     {
         i = ii / d2 + off;
         j = ii % d2 + off;
@@ -390,8 +377,10 @@ bool won(int off)
     return true;
 }
 
-// s = number of steps already taken;
-// next would be step s+1 to be stored in solutions[s]
+/**
+ * s = number of steps already taken;
+ * next would be step s+1 to be stored in solutions[s]
+ */
 int brute(int offset, int s, int solutions[32])
 {
     // we've reached limit of DFS, return
@@ -535,7 +524,6 @@ void get_position(int tile, int *reti, int* retj)
     }
 }
 
-
 // DANGER: god moves don't check...
 void god_move_up()
 {
@@ -634,7 +622,6 @@ void god_solve(int cur_d)
         oldej = e_j;
 
         int solved = brute(init, 0, solutions);
-
 
         // restore the board
         for(i = 0; i < 3; i++)
@@ -757,7 +744,6 @@ void god_solve(int cur_d)
                 curj++;
             }
 
-
             // move tile upward
             if (targetj != d - 1)
             {
@@ -822,7 +808,6 @@ void god_solve(int cur_d)
             {
                 targetj = targetjj;
             }
-
 
             // hack
             if (targetii == d - 1 && curj == init + 1 && curi == d - 2)
@@ -889,7 +874,6 @@ void god_solve(int cur_d)
                 god_move_down();
                 curi++;
             }
-
 
             // move tile leftward
             if (targeti != d - 1)
