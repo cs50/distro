@@ -17,19 +17,10 @@
 #define JPEG_FILENAME_LENGTH 8
 
 // format of the output JPEG filenames
-#define JPEG_FILENAME_FORMAT "%03d.jpg"
+#define JPEG_FILENAME_FORMAT "%03i.jpg"
 
 // block size of a CF card, in bytes
 #define BLOCK_SIZE 512
-
-// JPEG header bytes specified in the problem set
-// names from http://en.wikipedia.org/wiki/JPEG#Syntax_and_structure
-// (nb: students need not use these names)
-#define SOI_0  0xff
-#define SOI_1  0xd8
-#define APPN   0xff
-#define APP0   0xe0
-#define APP1   0xe1
 
 /**
  * Returns true iff we've got a JPEG header as defined in the pset
@@ -37,10 +28,10 @@
  */
 bool is_jpeg_header(unsigned char header[])
 {
-    return (header[0] == SOI_0 && 
-            header[1] == SOI_1 && 
-            header[2] == APPN && 
-            (header[3] == APP0 || header[3] == APP1));
+    return (header[0] == 0xff && 
+            header[1] == 0xd8 && 
+            header[2] == 0xff &&
+            header[3] & 0xe0);
 }
 
 int main(int argc, char* argv[])
