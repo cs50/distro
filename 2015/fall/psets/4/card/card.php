@@ -1,6 +1,16 @@
 #!/usr/bin/env php
 <?php
 
+    /**
+     * card.php
+     *
+     * David J. Malan
+     * malan@harvard.edu
+     *
+     * Creates a forensic image called card.raw containing JPEGs for
+     * CS50's recover.c.
+     */
+
     // ensure convert is installed
     if (empty(shell_exec("which convert")))
     {
