@@ -1,53 +1,102 @@
 #!/usr/bin/env php
 <?php
 
-    // ensure proper usage
-    if ($argc < 3)
+    // ensure convert is installed
+    if (empty(shell_exec("which convert")))
     {
-        die("Usage: php card.php outfile infile [...]\n");
+        die("convert not installed\n");
+    }
+
+    // ensure proper usage
+    if ($argc < 2)
+    {
+        die("Usage: php card.php infile [...]\n");
     }
 
     // open outfile
-    if (!preg_match("/\.raw$/i", $argv[1]))
+    $card = "card.raw";
+    if (file_exists($card))
     {
-        die("outfile must end in .raw\n");
+        die("{$card} already exists\n");
     }
-    $outfile = fopen($argv[1], "wb");
+    $outfile = fopen($card, "wb");
+    if ($outfile === false)
+    {
+        die("could not create {$card}\n");
+    }
 
     // write a block of all 0s to outfile
     for ($i = 0; $i < 512; $i++)
     {
-        fwrite($outfile, chr(0));
+        if (fwrite($outfile, chr(0)) === false)
+        {
+            die("could not write zeroes to {$card}\n");
+        }
     }
-    print("Wrote block of zeroes.\n");
+    print("Wrote block with zeroes to {$card}.\n");
 
     // write easter egg to outfile
     $egg = " bit.ly/18gECvy ";
-    fwrite($outfile, $egg);
+    if (fwrite($outfile, $egg) === false)
+    {
+        die("could not write easter egg to {$card}\n");
+    }
     for ($i = 0, $n = 512 - strlen($egg) % 512; $i < $n; $i++)
     {
-        fwrite($outfile, chr(0));
+        if (fwrite($outfile, chr(0)) === false)
+        {
+            die("could not write zeroes to {$card}\n");
+        }
     }
-    print("Wrote block(s) with easter egg.\n");
+    print("Wrote block(s) with easter egg to {$card}.\n");
 
     // iterate over infiles
-    $files = array_slice($argv, 2);
+    $files = array_slice($argv, 1);
     foreach ($files as $file)
     {
+        // include *.jpg and *.jpeg, case-insensitively
         if (preg_match("/\.(jpg|jpeg)$/i", $file))
         {
             $temp = tempnam(sys_get_temp_dir(), "");
-            system(escapeshellcmd("convert {$file} -strip {$temp}"));
+            if ($temp === false)
+            {
+                die("could not create temporary file\n");
+            }
+            if (system(escapeshellcmd("convert {$file} -strip {$temp}")) === false)
+            {
+                die("could not strip metadata from {$file}\n");
+            }
             $size = filesize($temp);
+            if ($size === false)
+            {
+                die("could not determine size of temporary file\n");
+            }
             $infile = fopen($temp, "rb");
+            if ($infile === false)
+            {
+                die("could not open temporary file for reading\n");
+            }
             $contents = fread($infile, $size);
-            fclose($infile);
-            fwrite($outfile, $contents, $size);
+            if ($contents === false)
+            {
+                die("could not read temporary file\n");
+            }
+            if (fclose($infile) === false)
+            {
+                die("could not close {$file}\n");
+            }
+            if (fwrite($outfile, $contents, $size) === false)
+            {
+                die("could not write contents of {$file} to {$card}\n");
+            }
             for ($i = 0, $n = 512 - $size % 512; $i < $n; $i++)
             {
-                fwrite($outfile, chr(0));
+                if (fwrite($outfile, chr(0)) === false)
+                {
+                    die("could not write zeroes to {$card}\n");
+                }
             }
-            print("Wrote {$file}.\n");
+            print("Wrote {$file} to {$card}.\n");
         }
         else
         {
@@ -56,6 +105,9 @@
     }
 
     // close outfile
-    fclose($outfile);
+    if (fclose($outfile) === false)
+    {
+        die("could not close {$card}\n");
+    }
 
 ?>
