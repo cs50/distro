@@ -6,6 +6,7 @@
 //
 // TODO: make cfd, sfd non-global?
 // TODO: update w3 URLs?
+// TODO: add URL decode
 
 // feature test macro requirements
 #define _GNU_SOURCE
@@ -18,8 +19,8 @@
 #define LimitRequestFieldSize 4094
 #define LimitRequestLine 8190
 
-// number of octets for buffered reads
-#define OCTETS 512
+// number of bytes for buffers
+#define BYTES 512
 
 // header files
 #include <arpa/inet.h>
@@ -39,7 +40,7 @@
 #include <unistd.h>
 
 // types
-typedef char octet;
+typedef char BYTE;
 
 // prototypes
 bool connected(void);
@@ -48,12 +49,12 @@ void freedir(struct dirent** namelist, int n);
 void handler(int signal);
 char* htmlspecialchars(const char* s);
 void interpret(const char* path, const char* query);
-bool load(FILE* file, octet** content, size_t* length);
+bool load(FILE* file, BYTE** content, size_t* length);
 const char* lookup(const char* extension);
-bool parse(const char* request, char* path, char* query);
+bool parse(const char* message, char* path, char* query);
 const char* reason(unsigned short code);
 void redirect(const char* uri);
-bool request(char** headers, size_t* length);
+bool request(char** message, size_t* length);
 void respond(int code, const char* headers, const char* body, size_t length);
 void list(const char* path);
 void start(short port, const char* path);
@@ -123,9 +124,21 @@ int main(int argc, char* argv[])
     sigemptyset(&act.sa_mask);
     sigaction(SIGINT, &act, NULL);
 
+    // message and its length
+    char* message = NULL;
+    size_t length = 0;
+
     // accept connections one at a time
     while (true)
     {
+        // free last message, if any
+        if (message != NULL)
+        {
+            free(message);
+            message = NULL;
+        }
+        length = 0;
+
         // close last client's socket, if any
         if (cfd != -1)
         {
@@ -143,17 +156,15 @@ int main(int argc, char* argv[])
         if (connected())
         {
             // check for request
-            char* headers;
-            size_t length;
-            if (request(&headers, &length))
+            if (request(&message, &length))
             {
-                // log headers
-                printf("%s", headers);
+                // log message
+                printf("%s", message);
 
-                // parse headers
+                // parse message
                 char abs_path[LimitRequestLine + 1];
                 char query[LimitRequestLine + 1];
-                if (parse(headers, abs_path, query) == true)
+                if (parse(message, abs_path, query) == true)
                 {
                     // determine file's full path
                     char path[strlen(root) + strlen(abs_path) + 1];
@@ -164,14 +175,14 @@ int main(int argc, char* argv[])
                     if (access(path, F_OK) == -1)
                     {
                         error(404);
-                        break;
+                        continue;
                     }
 
                     // ensure file is readable
                     if (access(path, R_OK) == -1)
                     {
                         error(403);
-                        break;
+                        continue;
                     }
 
                     // path is to directory
@@ -185,7 +196,7 @@ int main(int argc, char* argv[])
                             strcpy(uri, abs_path);
                             strcat(uri, "/");
                             redirect(uri);
-                            break;
+                            continue;
                         }
 
                         // list directory entries
@@ -201,7 +212,7 @@ int main(int argc, char* argv[])
                         if (needle == NULL)
                         {
                             error(501);
-                            break;
+                            continue;
                         }
                         char extension[strlen(needle + 1) + 1];
                         strcpy(extension, needle + 1);
@@ -219,10 +230,6 @@ int main(int argc, char* argv[])
                         }
                     }
                 }
-            }
-            if (headers != NULL)
-            {
-                free(headers);
             }
         }
     }
@@ -414,7 +421,7 @@ void interpret(const char* path, const char* query)
     }
 
     // load interpreter's content
-    octet* content;
+    char* content;
     size_t length;
     if (load(file, &content, &length) == false)
     {
@@ -426,8 +433,8 @@ void interpret(const char* path, const char* query)
     pclose(file);
 
     // subtract php-cgi's headers from content's length to get body's length
-    octet* haystack = content;
-    octet* needle = strstr(haystack, "\r\n\r\n");
+    char* haystack = content;
+    char* needle = strstr(haystack, "\r\n\r\n");
     if (needle == NULL)
     {
         error(500);
@@ -543,7 +550,7 @@ void list(const char* path)
  * Loads a file into memory dynamically allocated on heap.
  * Stores address * thereof in *content and length thereof in *length.
  */
-bool load(FILE* file, octet** content, size_t* length)
+bool load(FILE* file, BYTE** content, size_t* length)
 {
     // ensure file is open
     if (file == NULL)
@@ -558,9 +565,9 @@ bool load(FILE* file, octet** content, size_t* length)
     // read file
     while (true)
     {
-        // try to read a buffer's worth of octets
-        octet buffer[OCTETS];
-        ssize_t octets = fread(buffer, sizeof(octet), OCTETS, file);
+        // try to read a buffer's worth of bytes
+        BYTE buffer[BYTES];
+        ssize_t bytes = fread(buffer, sizeof(BYTE), BYTES, file);
 
         // check for error
         if (ferror(file) != 0)
@@ -574,17 +581,17 @@ bool load(FILE* file, octet** content, size_t* length)
             return false;
         }
 
-        // append octets to content
-        if (octets > 0)
+        // append bytes to content
+        if (bytes > 0)
         {
-            *content = realloc(*content, *length + octets);
+            *content = realloc(*content, *length + bytes);
             if (*content == NULL)
             {
                 *length = 0;
                 return false;
             }
-            memcpy(*content + *length, buffer, octets);
-            *length += octets;
+            memcpy(*content + *length, buffer, bytes);
+            *length += bytes;
         }
 
         // check for EOF
@@ -651,13 +658,15 @@ const char* lookup(const char* extension)
 }
 
 /**
- *
+ * Parses a request message, storing its request-line's absolute-path at 
+ * abs_path and its query string at query, both of which are assumed
+ * to be at least of length LimitRequestLine + 1.
  */
-bool parse(const char* request, char* abs_path, char* query)
+bool parse(const char* message, char* abs_path, char* query)
 {
-    // extract request's request-line
+    // extract message's request-line
     // http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
-    const char* haystack = request;
+    const char* haystack = message;
     const char* needle = strstr(haystack, "\r\n");
     if (needle == NULL)
     {
@@ -833,9 +842,9 @@ bool request(char** headers, size_t* length)
     while (*length < LimitRequestLine + LimitRequestFields * LimitRequestFieldSize + 4)
     {
         // read from socket
-        octet buffer[OCTETS];
-        ssize_t octets = read(cfd, buffer, OCTETS);
-        if (octets < 0)
+        BYTE buffer[BYTES];
+        ssize_t bytes = read(cfd, buffer, BYTES);
+        if (bytes < 0)
         {
             if (*headers != NULL)
             {
@@ -846,22 +855,22 @@ bool request(char** headers, size_t* length)
             break;
         }
 
-        // append octets to headers
-        *headers = realloc(*headers, *length + octets + 1);
+        // append bytes to headers
+        *headers = realloc(*headers, *length + bytes + 1);
         if (*headers == NULL)
         {
             *length = 0;
             break;
         }
-        memcpy(*headers + *length, buffer, octets);
-        *length += octets;
+        memcpy(*headers + *length, buffer, bytes);
+        *length += bytes;
 
         // null-terminate headers thus far
         *(*headers + *length) = '\0';
 
         // search for CRLF CRLF
-        int offset = (*length - octets < 3) ? *length - octets : 3;
-        char* haystack = *headers + *length - octets - offset;
+        int offset = (*length - bytes < 3) ? *length - bytes : 3;
+        char* haystack = *headers + *length - bytes - offset;
         char* needle = strstr(haystack, "\r\n\r\n");
         if (needle != NULL)
         {
@@ -1060,7 +1069,7 @@ void transfer(const char* path)
     }
 
     // load file's content
-    octet* content;
+    BYTE* content;
     size_t length;
     if (load(file, &content, &length) == false)
     {
