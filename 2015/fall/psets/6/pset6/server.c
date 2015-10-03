@@ -6,8 +6,6 @@
 //
 // TODO: make cfd, sfd non-global?
 // TODO: update w3 URLs?
-// TODO: ditch octet?
-// TODO: fix HTTP/1.1 413 Request Entity Too Large, via telnet
 
 // feature test macro requirements
 #define _GNU_SOURCE
@@ -50,13 +48,13 @@ void freedir(struct dirent** namelist, int n);
 void handler(int signal);
 char* htmlspecialchars(const char* s);
 void interpret(const char* path, const char* query);
-bool load(FILE* file, octet** content, ssize_t* length);
+bool load(FILE* file, octet** content, size_t* length);
 const char* lookup(const char* extension);
 bool parse(const char* request, char* path, char* query);
 const char* reason(unsigned short code);
 void redirect(const char* uri);
-bool request(char** headers, ssize_t* length);
-void respond(int code, const char* headers, const char* body, int length);
+bool request(char** headers, size_t* length);
+void respond(int code, const char* headers, const char* body, size_t length);
 void list(const char* path);
 void start(short port, const char* path);
 void stop(void);
@@ -146,7 +144,7 @@ int main(int argc, char* argv[])
         {
             // check for request
             char* headers;
-            ssize_t length;
+            size_t length;
             if (request(&headers, &length))
             {
                 // log headers
@@ -417,7 +415,7 @@ void interpret(const char* path, const char* query)
 
     // load interpreter's content
     octet* content;
-    ssize_t length;
+    size_t length;
     if (load(file, &content, &length) == false)
     {
         error(500);
@@ -429,7 +427,7 @@ void interpret(const char* path, const char* query)
 
     // subtract php-cgi's headers from content's length to get body's length
     octet* haystack = content;
-    octet* needle = memmem(haystack, length, "\r\n\r\n", 4);
+    octet* needle = strstr(haystack, "\r\n\r\n");
     if (needle == NULL)
     {
         error(500);
@@ -545,7 +543,7 @@ void list(const char* path)
  * Loads a file into memory dynamically allocated on heap.
  * Stores address * thereof in *content and length thereof in *length.
  */
-bool load(FILE* file, octet** content, ssize_t* length)
+bool load(FILE* file, octet** content, size_t* length)
 {
     // ensure file is open
     if (file == NULL)
@@ -819,7 +817,7 @@ void redirect(const char* uri)
  * Reads (without blocking) an HTTP request's headers into memory dynamically allocated on heap.
  * Stores address * thereof in *headers and length thereof in *length.
  */
-bool request(char** headers, ssize_t* length)
+bool request(char** headers, size_t* length)
 {
     // ensure socket is open
     if (cfd == -1)
@@ -885,7 +883,7 @@ bool request(char** headers, ssize_t* length)
 /**
  * Responds to a client with status code, headers, and body of specified length.
  */
-void respond(int code, const char* headers, const char* body, int length)
+void respond(int code, const char* headers, const char* body, size_t length)
 {
     // determine Status-Line's phrase
     // http://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html#sec6.1
@@ -1063,7 +1061,7 @@ void transfer(const char* path)
 
     // load file's content
     octet* content;
-    ssize_t length;
+    size_t length;
     if (load(file, &content, &length) == false)
     {
         error(500);
