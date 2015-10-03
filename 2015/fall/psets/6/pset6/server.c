@@ -6,7 +6,15 @@
 //
 // TODO: make cfd, sfd non-global?
 // TODO: update w3 URLs?
-// TODO: add URL decode
+// TODO: add URL decode?
+// TODO: change BYTE to octet or char?
+// TODO: add support for 413 Request Entity Too Large (via request() method), perhaps by returning size (and INT_MAX or such) instead of changing via pointer?
+//
+// TODO for students:
+// - lookup
+// - parse
+// - load
+// - 
 
 // feature test macro requirements
 #define _GNU_SOURCE
@@ -60,6 +68,7 @@ void list(const char* path);
 void start(short port, const char* path);
 void stop(void);
 void transfer(const char* path);
+char* urldecode(const char* s);
 
 // server's root
 char* root = NULL;
@@ -115,9 +124,6 @@ int main(int argc, char* argv[])
     start(port, argv[optind]);
 
     // listen for SIGINT (aka control-c)
-    /*
-    signal(SIGINT, handler);
-    */
     struct sigaction act;
     act.sa_handler = handler;
     act.sa_flags = 0;
@@ -166,10 +172,21 @@ int main(int argc, char* argv[])
                 char query[LimitRequestLine + 1];
                 if (parse(message, abs_path, query) == true)
                 {
+                    // decode absolute-path
+                    char* decoded = urldecode(abs_path);
+                    if (decoded == NULL)
+                    {
+                        error(500);
+                        continue;
+                    }
+
                     // determine file's full path
-                    char path[strlen(root) + strlen(abs_path) + 1];
+                    char path[strlen(root) + strlen(decoded) + 1];
                     strcpy(path, root);
-                    strcat(path, abs_path);
+                    strcat(path, decoded);
+
+                    // free decoded absolute-path
+                    free(decoded);
 
                     // ensure file exists
                     if (access(path, F_OK) == -1)
@@ -271,8 +288,8 @@ void error(unsigned short code)
     int length = sprintf(body, template, code, phrase, code, phrase);
     if (length < 0)
     {
-        // TODO: 500
-        return;
+        body[0] = '\0';
+        length = 0;
     }
 
     // respond with error
@@ -308,7 +325,7 @@ void handler(int signal)
 }
 
 /**
- * Escapes string for HTML.
+ * Escapes string for HTML, returning dynamically allocated memory for escaped string.
  */
 char* htmlspecialchars(const char* s)
 {
@@ -1094,4 +1111,31 @@ void transfer(const char* path)
 
     // free file's content
     free(content);
+}
+
+/**
+ * URL-decodes string, returning dynamically allocated memory for decoded string.
+ */
+char* urldecode(const char* s)
+{
+    // check whether s is NULL
+    if (s == NULL)
+    {
+        return NULL;
+    }
+
+    // allocate enough space for an undecoded copy of s
+    char* t = malloc(strlen(s) + 1);
+    if (t == NULL)
+    {
+        return NULL;
+    }
+    t[0] = '\0';
+
+    // iterate over characters in s, decoding as needed
+    strcpy(t, s);
+    // TODO?
+
+    // escaped string
+    return t;
 }
