@@ -55,6 +55,7 @@ const char* lookup(const char* extension);
 bool parse(const char* request, char* path, char* query);
 const char* reason(unsigned short code);
 void redirect(const char* uri);
+bool request(char** headers, ssize_t* length);
 void respond(int code, const char* headers, const char* body, int length);
 void list(const char* path);
 void start(short port, const char* path);
@@ -115,7 +116,14 @@ int main(int argc, char* argv[])
     start(port, argv[optind]);
 
     // listen for SIGINT (aka control-c)
+    /*
     signal(SIGINT, handler);
+    */
+    struct sigaction act;
+    act.sa_handler = handler;
+    act.sa_flags = 0;
+    sigemptyset(&act.sa_mask);
+    sigaction(SIGINT, &act, NULL);
 
     // accept connections one at a time
     while (true)
@@ -136,134 +144,106 @@ int main(int argc, char* argv[])
         // check whether client has connected
         if (connected())
         {
-            // read HTTP request's headers
-            octet headers[LimitRequestLine + LimitRequestFields * LimitRequestFieldSize + 4 + 1];
-            ssize_t length = read(cfd, headers, sizeof(headers) - 1);
-            if (length == -1)
+            // check for request
+            char* headers;
+            ssize_t length;
+            if (request(&headers, &length))
             {
-                error(500);
-                continue;
-            }
-            *(headers + length) = '\0';
+                // log headers
+                printf("%s", headers);
 
-            // search for CRLF CRLF, per http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5
-            const char* haystack = headers;
-            char* needle = strstr(haystack, "\r\n\r\n");
-            if (needle == NULL)
-            {
-                error(413);
-                continue;
-            }
-
-            // trim trailing CRLF
-            *(needle + 2) = '\0';
-
-            // log headers
-            printf("%s", headers);
-
-            // parse headers
-            char abs_path[LimitRequestLine + 1];
-            char query[LimitRequestLine + 1];
-            if (parse(headers, abs_path, query) == true)
-            {
-                // determine file's full path
-                char path[strlen(root) + strlen(abs_path) + 1];
-                strcpy(path, root);
-                strcat(path, abs_path);
-
-                // ensure file exists
-                if (access(path, F_OK) == -1)
+                // parse headers
+                char abs_path[LimitRequestLine + 1];
+                char query[LimitRequestLine + 1];
+                if (parse(headers, abs_path, query) == true)
                 {
-                    error(404);
-                    continue;
-                }
+                    // determine file's full path
+                    char path[strlen(root) + strlen(abs_path) + 1];
+                    strcpy(path, root);
+                    strcat(path, abs_path);
 
-                // ensure file is readable
-                if (access(path, R_OK) == -1)
-                {
-                    error(403);
-                    continue;
-                }
-
-                // path is to directory
-                struct stat sb;
-                if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
-                {
-                    // redirect from absolute-path to absolute-path/
-                    if (abs_path[strlen(abs_path) - 1] != '/')
+                    // ensure file exists
+                    if (access(path, F_OK) == -1)
                     {
-                        char uri[strlen(abs_path) + 1 + 1];
-                        strcpy(uri, abs_path);
-                        strcat(uri, "/");
-                        redirect(uri);
-                        continue;
+                        error(404);
+                        break;
                     }
 
-                    // list directory entries
-                    list(path);
-                }
-
-                // path is to file
-                else
-                {
-                    // extract file's extension
-                    haystack = path;
-                    needle = strrchr(haystack, '.');
-                    if (needle == NULL)
+                    // ensure file is readable
+                    if (access(path, R_OK) == -1)
                     {
-                        error(501);
-                        continue;
-                    }
-                    char extension[strlen(needle + 1) + 1];
-                    strcpy(extension, needle + 1);
-
-                    // interpret PHP script at path
-                    if (strcasecmp("php", extension) == 0)
-                    {
-                        interpret(path, query);
+                        error(403);
+                        break;
                     }
 
-                    // transfer file at path
+                    // path is to directory
+                    struct stat sb;
+                    if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
+                    {
+                        // redirect from absolute-path to absolute-path/
+                        if (abs_path[strlen(abs_path) - 1] != '/')
+                        {
+                            char uri[strlen(abs_path) + 1 + 1];
+                            strcpy(uri, abs_path);
+                            strcat(uri, "/");
+                            redirect(uri);
+                            break;
+                        }
+
+                        // list directory entries
+                        list(path);
+                    }
+
+                    // path is to file
                     else
                     {
-                        transfer(path);
+                        // extract file's extension
+                        const char* haystack = path;
+                        const char* needle = strrchr(haystack, '.');
+                        if (needle == NULL)
+                        {
+                            error(501);
+                            break;
+                        }
+                        char extension[strlen(needle + 1) + 1];
+                        strcpy(extension, needle + 1);
+
+                        // interpret PHP script at path
+                        if (strcasecmp("php", extension) == 0)
+                        {
+                            interpret(path, query);
+                        }
+
+                        // transfer file at path
+                        else
+                        {
+                            transfer(path);
+                        }
                     }
                 }
+            }
+            if (headers != NULL)
+            {
+                free(headers);
             }
         }
     }
 }
 
 /**
- * Checks whether a client has connected to server.
+ * Checks (without blocking) whether a client has connected to server.
  */
 bool connected(void)
 {
-    // add server's file descriptor to a set
-    fd_set rfds;
-    FD_ZERO(&rfds);
-    FD_SET(sfd, &rfds);
-
-    // listen for 1 second
-    struct timeval tv;
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
-    int retval = select(sfd + 1, &rfds, NULL, NULL, &tv);
-
-    // accept connection if heard
-    if (retval > 0)
+    struct sockaddr_in cli_addr;
+    memset(&cli_addr, 0, sizeof(cli_addr));
+    socklen_t cli_len = sizeof(cli_addr);
+    cfd = accept(sfd, (struct sockaddr*) &cli_addr, &cli_len);
+    if (cfd == -1)
     {
-        struct sockaddr_in cli_addr;
-        memset(&cli_addr, 0, sizeof(cli_addr));
-        socklen_t cli_len = sizeof(cli_addr);
-        cfd = accept(sfd, (struct sockaddr*) &cli_addr, &cli_len);
-        if (cfd == -1)
-        {
-            return false;
-        }
-        return true;
+        return false;
     }
-    return false;
+    return true;
 }
 
 /**
@@ -562,8 +542,8 @@ void list(const char* path)
 }
 
 /**
- * Loads file into dynamically allocated memory. Stores address
- * thereof in *content and length thereof in *length.
+ * Loads a file into memory dynamically allocated on heap.
+ * Stores address * thereof in *content and length thereof in *length.
  */
 bool load(FILE* file, octet** content, ssize_t* length)
 {
@@ -833,6 +813,73 @@ void redirect(const char* uri)
         return;
     }
     respond(301, headers, NULL, 0);
+}
+
+/**
+ * Reads (without blocking) an HTTP request's headers into memory dynamically allocated on heap.
+ * Stores address * thereof in *headers and length thereof in *length.
+ */
+bool request(char** headers, ssize_t* length)
+{
+    // ensure socket is open
+    if (cfd == -1)
+    {
+        return false;
+    }
+
+    // initialize headers and their length
+    *headers = NULL;
+    *length = 0;
+
+    // read headers
+    while (*length < LimitRequestLine + LimitRequestFields * LimitRequestFieldSize + 4)
+    {
+        // read from socket
+        octet buffer[OCTETS];
+        ssize_t octets = read(cfd, buffer, OCTETS);
+        if (octets < 0)
+        {
+            if (*headers != NULL)
+            {
+                free(*headers);
+                *headers = NULL;
+            }
+            *length = 0;
+            break;
+        }
+
+        // append octets to headers
+        *headers = realloc(*headers, *length + octets + 1);
+        if (*headers == NULL)
+        {
+            *length = 0;
+            break;
+        }
+        memcpy(*headers + *length, buffer, octets);
+        *length += octets;
+
+        // null-terminate headers thus far
+        *(*headers + *length) = '\0';
+
+        // search for CRLF CRLF
+        int offset = (*length - octets < 3) ? *length - octets : 3;
+        char* haystack = *headers + *length - octets - offset;
+        char* needle = strstr(haystack, "\r\n\r\n");
+        if (needle != NULL)
+        {
+            // trim to one CRLF and null-terminate
+            *length = needle - *headers + 2;
+            *headers = realloc(*headers, *length + 1);
+            if (*headers == NULL)
+            {
+                *length = 0;
+                break;
+            }
+            *(*headers + *length) = '\0';
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
