@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
         }
 
         // check for control-c
-        if (signaled == true)
+        if (signaled)
         {
             stop();
         }
@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
                 // parse message
                 char abs_path[LimitRequestLine + 1];
                 char query[LimitRequestLine + 1];
-                if (parse(message, abs_path, query) == true)
+                if (parse(message, abs_path, query))
                 {
                     // URL-decode absolute-path
                     char* p = urldecode(abs_path);
