@@ -6,8 +6,6 @@
 //
 // TODO: make cfd, sfd non-global?
 // TODO: update w3 URLs?
-// TODO: add URL decode?
-// TODO: change BYTE to octet or char?
 // TODO: add support for 413 Request Entity Too Large (via request() method), perhaps by returning size (and INT_MAX or such) instead of changing via pointer?
 //
 // TODO for students:
@@ -56,18 +54,19 @@ void error(unsigned short code);
 void freedir(struct dirent** namelist, int n);
 void handler(int signal);
 char* htmlspecialchars(const char* s);
+char* indexes(const char* path);
 void interpret(const char* path, const char* query);
+void list(const char* path);
 bool load(FILE* file, BYTE** content, size_t* length);
-const char* lookup(const char* extension);
+const char* lookup(const char* path);
 bool parse(const char* message, char* path, char* query);
 const char* reason(unsigned short code);
 void redirect(const char* uri);
 bool request(char** message, size_t* length);
 void respond(int code, const char* headers, const char* body, size_t length);
-void list(const char* path);
 void start(short port, const char* path);
 void stop(void);
-void transfer(const char* path);
+void transfer(const char* path, const char* type);
 char* urldecode(const char* s);
 
 // server's root
@@ -130,13 +129,23 @@ int main(int argc, char* argv[])
     sigemptyset(&act.sa_mask);
     sigaction(SIGINT, &act, NULL);
 
-    // message and its length
+    // a message and its length
     char* message = NULL;
     size_t length = 0;
+
+    // path requested
+    char* path = NULL;
 
     // accept connections one at a time
     while (true)
     {
+        // free last path, if any
+        if (path != NULL)
+        {
+            free(path);
+            path = NULL;
+        }
+
         // free last message, if any
         if (message != NULL)
         {
@@ -172,37 +181,33 @@ int main(int argc, char* argv[])
                 char query[LimitRequestLine + 1];
                 if (parse(message, abs_path, query) == true)
                 {
-                    // decode absolute-path
-                    char* decoded = urldecode(abs_path);
-                    if (decoded == NULL)
+                    // URL-decode absolute-path
+                    char* p = urldecode(abs_path);
+                    if (p == NULL)
                     {
                         error(500);
                         continue;
                     }
 
-                    // determine file's full path
-                    char path[strlen(root) + strlen(decoded) + 1];
+                    // resolve absolute-path to local path
+                    path = malloc(strlen(root) + strlen(p) + 1);
+                    if (path == NULL)
+                    {
+                        error(500);
+                        continue;
+                    }
                     strcpy(path, root);
-                    strcat(path, decoded);
+                    strcat(path, p);
+                    free(p);
 
-                    // free decoded absolute-path
-                    free(decoded);
-
-                    // ensure file exists
+                    // ensure path exists
                     if (access(path, F_OK) == -1)
                     {
                         error(404);
                         continue;
                     }
 
-                    // ensure file is readable
-                    if (access(path, R_OK) == -1)
-                    {
-                        error(403);
-                        continue;
-                    }
-
-                    // path is to directory
+                    // if path to directory
                     struct stat sb;
                     if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
                     {
@@ -216,35 +221,40 @@ int main(int argc, char* argv[])
                             continue;
                         }
 
-                        // list directory entries
-                        list(path);
-                    }
-
-                    // path is to file
-                    else
-                    {
-                        // extract file's extension
-                        const char* haystack = path;
-                        const char* needle = strrchr(haystack, '.');
-                        if (needle == NULL)
+                        // use path/index.php or path/index.html, if present, instead of directory's path
+                        char* index = indexes(path);
+                        if (index != NULL)
                         {
-                            error(501);
-                            continue;
-                        }
-                        char extension[strlen(needle + 1) + 1];
-                        strcpy(extension, needle + 1);
-
-                        // interpret PHP script at path
-                        if (strcasecmp("php", extension) == 0)
-                        {
-                            interpret(path, query);
+                            free(path);
+                            path = index;
                         }
 
-                        // transfer file at path
+                        // list contents of directory
                         else
                         {
-                            transfer(path);
+                            list(path);
+                            continue;
                         }
+                    }
+
+                    // look up MIME type for file at path
+                    const char* type = lookup(path);
+                    if (type == NULL)
+                    {
+                        error(501);
+                        continue;
+                    }
+
+                    // interpret PHP script at path
+                    if (strcasecmp("text/x-php", type) == 0)
+                    {
+                        interpret(path, query);
+                    }
+
+                    // transfer file at path
+                    else
+                    {
+                        transfer(path, type);
                     }
                 }
             }
@@ -253,7 +263,8 @@ int main(int argc, char* argv[])
 }
 
 /**
- * Checks (without blocking) whether a client has connected to server.
+ * Checks (without blocking) whether a client has connected to server. 
+ * Returns true iff so.
  */
 bool connected(void)
 {
@@ -325,11 +336,12 @@ void handler(int signal)
 }
 
 /**
- * Escapes string for HTML, returning dynamically allocated memory for escaped string.
+ * Escapes string for HTML. Returns dynamically allocated memory for escaped
+ * string that must be deallocated by caller.
  */
 char* htmlspecialchars(const char* s)
 {
-    // check whether s is NULL
+    // ensure s is not NULL
     if (s == NULL)
     {
         return NULL;
@@ -349,61 +361,66 @@ char* htmlspecialchars(const char* s)
         // escape &
         if (s[i] == '&')
         {
-            new += 5;
+            const char* entity = "&amp;";
+            new += strlen(entity);
             t = realloc(t, new);
             if (t == NULL)
             {
                 return NULL;
             }
-            strcat(t, "&amp;");
+            strcat(t, entity);
         }
 
         // escape "
         else if (s[i] == '"')
         {
-            new += 6;
+            const char* entity = "&quot;";
+            new += strlen(entity);
             t = realloc(t, new);
             if (t == NULL)
             {
                 return NULL;
             }
-            strcat(t, "&quot;");
+            strcat(t, entity);
         }
 
         // escape '
         else if (s[i] == '\'')
         {
-            new += 6;
+            const char* entity = "&#039;";
+            new += strlen(entity);
             t = realloc(t, new);
             if (t == NULL)
             {
                 return NULL;
             }
-            strcat(t, "&#039;");
+            strcat(t, entity);
         }
 
         // escape <
         else if (s[i] == '<')
         {
-            new += 4;
+            const char* entity = "&lt;";
+            new += strlen(entity);
             t = realloc(t, new);
             if (t == NULL)
             {
                 return NULL;
             }
-            strcat(t, "&lt;");
+            strcat(t, entity);
         }
 
         // escape >
         else if (s[i] == '>')
         {
-            new += 4;
+            const char* entity = "&gt;";
+            new += strlen(entity);
             t = realloc(t, new);
             if (t == NULL)
             {
                 return NULL;
             }
-            strcat(t, "&gt;");
+            strcat(t, entity);
         }
 
         // don't escape
@@ -418,10 +435,72 @@ char* htmlspecialchars(const char* s)
 }
 
 /**
+ * Checks, in order, whether index.php or index.html exists inside of path.
+ * Returns path to first match if so, else NULL.
+ */
+char* indexes(const char* path)
+{
+    // ensure path is non-NULL
+    if (path == NULL)
+    {
+        return NULL;
+    }
+
+    // ensure path exists
+    if (access(path, F_OK) == -1)
+    {
+        return NULL;
+    }
+
+    // if path is directory
+    struct stat sb;
+    if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
+    {
+        // check if path/index.php exists
+        char* index = malloc(strlen(path) + strlen("index.php") + 1);
+        if (index == NULL)
+        {
+            return NULL;
+        }
+        strcpy(index, path);
+        strcat(index, "index.php");
+        if (access(index, F_OK) != -1)
+        {
+            return index;
+        }
+        free(index);
+
+        // check if path/index.html exists
+        index = malloc(strlen(path) + strlen("index.html") + 1);
+        if (index == NULL)
+        {
+            return NULL;
+        }
+        strcpy(index, path);
+        strcat(index, "index.html");
+        if (access(index, F_OK) != -1)
+        {
+            return index;
+        }
+        free(index);
+    }
+
+    // no index
+    return NULL;
+}
+
+/**
  * Interprets PHP file at path using query string.
  */
 void interpret(const char* path, const char* query)
 {
+    // ensure path is readable
+    if (access(path, R_OK) == -1)
+    {
+        error(403);
+        return;
+    }
+
     // open pipe to PHP interpreter
     char* format = "QUERY_STRING=\"%s\" REDIRECT_STATUS=200 SCRIPT_FILENAME=\"%s\" php-cgi";
     char command[strlen(format) + (strlen(path) - 2) + (strlen(query) - 2) + 1];
@@ -454,6 +533,7 @@ void interpret(const char* path, const char* query)
     char* needle = strstr(haystack, "\r\n\r\n");
     if (needle == NULL)
     {
+        free(content);
         error(500);
         return;
     }
@@ -471,13 +551,14 @@ void interpret(const char* path, const char* query)
 }
 
 /**
- * Lists contents of directory at path.
+ * Responds to client with directory listing of path.
  */
 void list(const char* path)
 {
-    // ensure path is within root
-    if (strstr(path, root) == NULL)
+    // ensure path is readable and executable
+    if (access(path, R_OK | X_OK) == -1)
     {
+        error(403);
         return;
     }
 
@@ -565,7 +646,7 @@ void list(const char* path)
 
 /**
  * Loads a file into memory dynamically allocated on heap.
- * Stores address * thereof in *content and length thereof in *length.
+ * Stores address thereof in *content and length thereof in *length.
  */
 bool load(FILE* file, BYTE** content, size_t* length)
 {
@@ -584,7 +665,7 @@ bool load(FILE* file, BYTE** content, size_t* length)
     {
         // try to read a buffer's worth of bytes
         BYTE buffer[BYTES];
-        ssize_t bytes = fread(buffer, sizeof(BYTE), BYTES, file);
+        size_t bytes = fread(buffer, sizeof(BYTE), BYTES, file);
 
         // check for error
         if (ferror(file) != 0)
@@ -623,24 +704,40 @@ bool load(FILE* file, BYTE** content, size_t* length)
 /**
  * Returns MIME type for supported extensions, else NULL.
  */
-const char* lookup(const char* extension)
+const char* lookup(const char* path)
 {
+    // ensure path exists
+    if (access(path, F_OK) == -1)
+    {
+        return NULL;
+    }
+
+    // extract path's extension
+    const char* haystack = path;
+    const char* needle = strrchr(haystack, '.');
+    if (needle == NULL)
+    {
+        return NULL;
+    }
+    char extension[strlen(needle + 1) + 1];
+    strcpy(extension, needle + 1);
+
     // .css
     if (strcasecmp("css", extension) == 0)
     {
         return "text/css";
     }
 
-    // .html
-    else if (strcasecmp("html", extension) == 0)
-    {
-        return "text/html";
-    }
-
     // .gif
     else if (strcasecmp("gif", extension) == 0)
     {
         return "image/gif";
+    }
+
+    // .html
+    else if (strcasecmp("html", extension) == 0)
+    {
+        return "text/html";
     }
 
     // .ico
@@ -655,10 +752,16 @@ const char* lookup(const char* extension)
         return "image/jpeg";
     }
 
-    // .jpg
+    // .js
     else if (strcasecmp("js", extension) == 0)
     {
         return "text/javascript";
+    }
+
+    // .php
+    else if (strcasecmp("php", extension) == 0)
+    {
+        return "text/x-php";
     }
 
     // .png
@@ -667,7 +770,7 @@ const char* lookup(const char* extension)
         return "img/png";
     }
 
-    // unsupported
+    // *
     else
     {
         return NULL;
@@ -806,15 +909,11 @@ const char* reason(unsigned short code)
     switch (code)
     {
         case 200: return "OK";
-        case 201: return "Created";
-        case 204: return "No Content";
         case 301: return "Moved Permanently";
-        case 302: return "Found";
         case 400: return "Bad Request";
         case 403: return "Forbidden";
         case 404: return "Not Found";
         case 405: return "Method Not Allowed";
-        case 413: return "Request Entity Too Large";
         case 414: return "Request-URI Too Long";
         case 418: return "I'm a teapot";
         case 500: return "Internal Server Error";
@@ -841,9 +940,9 @@ void redirect(const char* uri)
 
 /**
  * Reads (without blocking) an HTTP request's headers into memory dynamically allocated on heap.
- * Stores address * thereof in *headers and length thereof in *length.
+ * Stores address thereof in *message and length thereof in *length.
  */
-bool request(char** headers, size_t* length)
+bool request(char** message, size_t* length)
 {
     // ensure socket is open
     if (cfd == -1)
@@ -851,11 +950,11 @@ bool request(char** headers, size_t* length)
         return false;
     }
 
-    // initialize headers and their length
-    *headers = NULL;
+    // initialize message and its length
+    *message = NULL;
     *length = 0;
 
-    // read headers
+    // read message 
     while (*length < LimitRequestLine + LimitRequestFields * LimitRequestFieldSize + 4)
     {
         // read from socket
@@ -863,43 +962,43 @@ bool request(char** headers, size_t* length)
         ssize_t bytes = read(cfd, buffer, BYTES);
         if (bytes < 0)
         {
-            if (*headers != NULL)
+            if (*message != NULL)
             {
-                free(*headers);
-                *headers = NULL;
+                free(*message);
+                *message = NULL;
             }
             *length = 0;
             break;
         }
 
-        // append bytes to headers
-        *headers = realloc(*headers, *length + bytes + 1);
-        if (*headers == NULL)
+        // append bytes to message 
+        *message = realloc(*message, *length + bytes + 1);
+        if (*message == NULL)
         {
             *length = 0;
             break;
         }
-        memcpy(*headers + *length, buffer, bytes);
+        memcpy(*message + *length, buffer, bytes);
         *length += bytes;
 
-        // null-terminate headers thus far
-        *(*headers + *length) = '\0';
+        // null-terminate message thus far
+        *(*message + *length) = '\0';
 
         // search for CRLF CRLF
         int offset = (*length - bytes < 3) ? *length - bytes : 3;
-        char* haystack = *headers + *length - bytes - offset;
+        char* haystack = *message + *length - bytes - offset;
         char* needle = strstr(haystack, "\r\n\r\n");
         if (needle != NULL)
         {
             // trim to one CRLF and null-terminate
-            *length = needle - *headers + 2;
-            *headers = realloc(*headers, *length + 1);
-            if (*headers == NULL)
+            *length = needle - *message + 2;
+            *message = realloc(*message, *length + 1);
+            if (*message == NULL)
             {
                 *length = 0;
                 break;
             }
-            *(*headers + *length) = '\0';
+            *(*message + *length) = '\0';
             return true;
         }
     }
@@ -959,19 +1058,13 @@ void respond(int code, const char* headers, const char* body, size_t length)
 }
 
 /**
- * Starts server.
+ * Starts server on specified port rooted at path.
  */
 void start(short port, const char* path)
 {
     // path to server's root
     root = realpath(path, NULL);
     if (root == NULL)
-    {
-        stop();
-    }
-
-    // ensure root exists
-    if (access(root, F_OK) == -1)
     {
         stop();
     }
@@ -1057,23 +1150,14 @@ void stop(void)
 }
 
 /**
- * Transfers file at path to client.
+ * Transfers file at path with specified type to client.
  */
-void transfer(const char* path)
+void transfer(const char* path, const char* type)
 {
-    // file's extension
-    const char* extension = strrchr(path, '.');
-    if (extension == NULL)
+    // ensure path is readable
+    if (access(path, R_OK) == -1)
     {
-        error(501);
-        return;
-    }
-
-    // file's MIME type
-    const char* type = lookup(extension + 1);
-    if (type == NULL)
-    {
-        error(501);
+        error(403);
         return;
     }
 
@@ -1114,7 +1198,8 @@ void transfer(const char* path)
 }
 
 /**
- * URL-decodes string, returning dynamically allocated memory for decoded string.
+ * URL-decodes string, returning dynamically allocated memory for decoded string
+ * that must be deallocated by caller.
  */
 char* urldecode(const char* s)
 {
@@ -1124,17 +1209,35 @@ char* urldecode(const char* s)
         return NULL;
     }
 
-    // allocate enough space for an undecoded copy of s
-    char* t = malloc(strlen(s) + 1);
+    // allocate enough (zeroed) memory for an undecoded copy of s
+    char* t = calloc(strlen(s) + 1, 1);
     if (t == NULL)
     {
         return NULL;
     }
-    t[0] = '\0';
-
-    // iterate over characters in s, decoding as needed
-    strcpy(t, s);
-    // TODO?
+    
+    // iterate over characters in s, decoding percent-encoded octets, per
+    // https://www.ietf.org/rfc/rfc3986.txt
+    for (int i = 0, j = 0, n = strlen(s); i < n; i++, j++)
+    {
+        if (s[i] == '%' && i < n - 2)
+        {
+            char octet[3];
+            octet[0] = s[i + 1];
+            octet[1] = s[i + 2];
+            octet[2] = '\0';
+            t[j] = (char) strtol(octet, NULL, 16);
+            i += 2;
+        }
+        else if (s[i] == '+')
+        {
+            t[j] = ' ';
+        }
+        else
+        {
+            t[j] = s[i];
+        }
+    }
 
     // escaped string
     return t;
