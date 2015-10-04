@@ -4,10 +4,6 @@
 // Computer Science 50
 // Problem Set 6
 //
-// TODO: make cfd, sfd non-global?
-// TODO: update w3 URLs?
-// TODO: add support for 413 Request Entity Too Large (via request() method), perhaps by returning size (and INT_MAX or such) instead of changing via pointer?
-//
 
 // feature test macro requirements
 #define _GNU_SOURCE
@@ -54,7 +50,7 @@ void interpret(const char* path, const char* query);
 void list(const char* path);
 bool load(FILE* file, BYTE** content, size_t* length);
 const char* lookup(const char* path);
-bool parse(const char* message, char* path, char* query);
+bool parse(const char* line, char* path, char* query);
 const char* reason(unsigned short code);
 void redirect(const char* uri);
 bool request(char** message, size_t* length);
@@ -168,13 +164,26 @@ int main(int argc, char* argv[])
             // check for request
             if (request(&message, &length))
             {
-                // log message
-                printf("%s", message);
+                // extract message's request-line
+                // http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
+                const char* haystack = message;
+                const char* needle = strstr(haystack, "\r\n");
+                if (needle == NULL)
+                {
+                    error(500);
+                    continue;
+                }
+                char line[needle - haystack + 2 + 1];
+                strncpy(line, haystack, needle - haystack + 2);
+                line[needle - haystack + 2] = '\0';
 
-                // parse message
+                // log request-line
+                printf("%s", line);
+
+                // parse request-line
                 char abs_path[LimitRequestLine + 1];
                 char query[LimitRequestLine + 1];
-                if (parse(message, abs_path, query))
+                if (parse(line, abs_path, query))
                 {
                     // URL-decode absolute-path
                     char* p = urldecode(abs_path);
@@ -777,33 +786,21 @@ const char* lookup(const char* path)
 }
 
 /**
- * Parses a request message, storing its request-line's absolute-path at 
- * abs_path and its query string at query, both of which are assumed
+ * Parses a request-line, storing its absolute-path at abs_path 
+ * and its query string at query, both of which are assumed
  * to be at least of length LimitRequestLine + 1.
  */
-bool parse(const char* message, char* abs_path, char* query)
+bool parse(const char* line, char* abs_path, char* query)
 {
-    // extract message's request-line
-    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
-    const char* haystack = message;
-    const char* needle = strstr(haystack, "\r\n");
-    if (needle == NULL)
+    // ensure arguments aren't NULL
+    if (line == NULL || abs_path == NULL || query == NULL)
     {
-        error(400);
         return false;
     }
-    else if (needle - haystack + 2 > LimitRequestLine)
-    {
-        error(414);
-        return false;
-    }   
-    char line[needle - haystack + 2 + 1];
-    strncpy(line, haystack, needle - haystack + 2);
-    line[needle - haystack + 2] = '\0';
 
     // find first SP in request-line
-    haystack = line;
-    needle = strchr(haystack, ' ');
+    const char* haystack = line;
+    const char* needle = strchr(haystack, ' ');
     if (needle == NULL)
     {
         error(400);
@@ -994,13 +991,64 @@ bool request(char** message, size_t* length)
             *message = realloc(*message, *length + 1);
             if (*message == NULL)
             {
-                *length = 0;
                 break;
             }
             *(*message + *length) = '\0';
+
+            // ensure request-line is no longer than LimitRequestLine
+            haystack = *message;
+            needle = strstr(haystack, "\r\n");
+            if (needle == NULL || (needle - haystack + 2) > LimitRequestLine)
+            {
+                break;
+            }
+
+            // count fields in message
+            int fields = 0;
+            haystack = needle + 2;
+            while (*haystack != '\0')
+            {
+                // look for CRLF
+                needle = strstr(haystack, "\r\n");
+                if (needle == NULL)
+                {
+                    break;
+                }
+
+                // ensure field is no longer than LimitRequestFieldSize
+                if (needle - haystack + 2 > LimitRequestFieldSize)
+                {
+                    break;
+                }
+
+                // look beyond CRLF
+                haystack = needle + 2;
+            }
+
+            // if we didn't get to end of message, we must have erred
+            if (*haystack != '\0')
+            {
+                break;
+            }
+
+            // ensure message has no more than LimitRequestFields
+            if (fields > LimitRequestFields)
+            {
+                break;
+            }
+
+            // valid
             return true;
         }
     }
+
+    // invalid
+    if (*message != NULL)
+    {
+        free(*message);
+    }
+    *message = NULL;
+    *length = 0;
     return false;
 }
 
