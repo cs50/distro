@@ -538,9 +538,9 @@ void interpret(const char* path, const char* query)
     }
 
     // extract headers
-    char headers[needle - haystack + 1];
-    strncpy(headers, content, needle - haystack);
-    headers[needle - haystack] = '\0';
+    char headers[needle + 2 - haystack + 1];
+    strncpy(headers, content, needle + 2 - haystack);
+    headers[needle + 2 - haystack] = '\0';
 
     // respond with interpreter's content
     respond(200, headers, needle + 4, length - (needle - haystack + 4));
@@ -1098,6 +1098,9 @@ void start(short port, const char* path)
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     if (bind(sfd, (struct sockaddr*) &serv_addr, sizeof(serv_addr)) == -1)
     {
+        printf("\033[33m");
+        printf("Port %i already in use", port);
+        printf("\033[39m\n");
         stop();
     }
 
