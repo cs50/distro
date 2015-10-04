@@ -4,10 +4,6 @@
 // Computer Science 50
 // Problem Set 6
 //
-// TODO: make cfd, sfd non-global?
-// TODO: update w3 URLs?
-// TODO: add support for 413 Request Entity Too Large (via request() method), perhaps by returning size (and INT_MAX or such) instead of changing via pointer?
-//
 
 // feature test macro requirements
 #define _GNU_SOURCE
@@ -439,52 +435,7 @@ char* htmlspecialchars(const char* s)
  */
 char* indexes(const char* path)
 {
-    // ensure path is non-NULL
-    if (path == NULL)
-    {
-        return NULL;
-    }
-
-    // ensure path exists
-    if (access(path, F_OK) == -1)
-    {
-        return NULL;
-    }
-
-    // if path is directory
-    struct stat sb;
-    if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
-    {
-        // check if path/index.php exists
-        char* index = malloc(strlen(path) + strlen("index.php") + 1);
-        if (index == NULL)
-        {
-            return NULL;
-        }
-        strcpy(index, path);
-        strcat(index, "index.php");
-        if (access(index, F_OK) != -1)
-        {
-            return index;
-        }
-        free(index);
-
-        // check if path/index.html exists
-        index = malloc(strlen(path) + strlen("index.html") + 1);
-        if (index == NULL)
-        {
-            return NULL;
-        }
-        strcpy(index, path);
-        strcat(index, "index.html");
-        if (access(index, F_OK) != -1)
-        {
-            return index;
-        }
-        free(index);
-    }
-
-    // no index
+    // TODO
     return NULL;
 }
 
@@ -649,55 +600,8 @@ void list(const char* path)
  */
 bool load(FILE* file, BYTE** content, size_t* length)
 {
-    // ensure file is open
-    if (file == NULL)
-    {
-        return false;
-    }
-
-    // initialize content and its length
-    *content = NULL;
-    *length = 0;
-
-    // read file
-    while (true)
-    {
-        // try to read a buffer's worth of bytes
-        BYTE buffer[BYTES];
-        size_t bytes = fread(buffer, sizeof(BYTE), BYTES, file);
-
-        // check for error
-        if (ferror(file) != 0)
-        {
-            if (*content != NULL)
-            {
-                free(*content);
-                *content = NULL;
-                *length = 0;
-            }
-            return false;
-        }
-
-        // append bytes to content
-        if (bytes > 0)
-        {
-            *content = realloc(*content, *length + bytes);
-            if (*content == NULL)
-            {
-                *length = 0;
-                return false;
-            }
-            memcpy(*content + *length, buffer, bytes);
-            *length += bytes;
-        }
-
-        // check for EOF
-        if (feof(file) != 0)
-        {
-            break;
-        }
-    }
-    return true;
+    // TODO
+    return false;
 }
 
 /**
@@ -705,196 +609,20 @@ bool load(FILE* file, BYTE** content, size_t* length)
  */
 const char* lookup(const char* path)
 {
-    // ensure path exists
-    if (access(path, F_OK) == -1)
-    {
-        return NULL;
-    }
-
-    // extract path's extension
-    const char* haystack = path;
-    const char* needle = strrchr(haystack, '.');
-    if (needle == NULL)
-    {
-        return NULL;
-    }
-    char extension[strlen(needle + 1) + 1];
-    strcpy(extension, needle + 1);
-
-    // .css
-    if (strcasecmp("css", extension) == 0)
-    {
-        return "text/css";
-    }
-
-    // .gif
-    else if (strcasecmp("gif", extension) == 0)
-    {
-        return "image/gif";
-    }
-
-    // .html
-    else if (strcasecmp("html", extension) == 0)
-    {
-        return "text/html";
-    }
-
-    // .ico
-    else if (strcasecmp("ico", extension) == 0)
-    {
-        return "image/x-icon";
-    }
-
-    // .jpg
-    else if (strcasecmp("jpg", extension) == 0)
-    {
-        return "image/jpeg";
-    }
-
-    // .js
-    else if (strcasecmp("js", extension) == 0)
-    {
-        return "text/javascript";
-    }
-
-    // .php
-    else if (strcasecmp("php", extension) == 0)
-    {
-        return "text/x-php";
-    }
-
-    // .png
-    else if (strcasecmp("png", extension) == 0)
-    {
-        return "img/png";
-    }
-
-    // *
-    else
-    {
-        return NULL;
-    }
+    // TODO
+    return NULL;
 }
 
 /**
  * Parses a request message, storing its request-line's absolute-path at 
  * abs_path and its query string at query, both of which are assumed
- * to be at least of length LimitRequestLine + 1.
+ * to be at least of length LimitRequestLine + 1. Returns true
+ * iff message is valid per RFC.
  */
 bool parse(const char* message, char* abs_path, char* query)
 {
-    // extract message's request-line
-    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
-    const char* haystack = message;
-    const char* needle = strstr(haystack, "\r\n");
-    if (needle == NULL)
-    {
-        error(400);
-        return false;
-    }
-    else if (needle - haystack + 2 > LimitRequestLine)
-    {
-        error(414);
-        return false;
-    }   
-    char line[needle - haystack + 2 + 1];
-    strncpy(line, haystack, needle - haystack + 2);
-    line[needle - haystack + 2] = '\0';
-
-    // find first SP in request-line
-    haystack = line;
-    needle = strchr(haystack, ' ');
-    if (needle == NULL)
-    {
-        error(400);
-        return false;
-    }
-
-    // extract method
-    char method[needle - haystack + 1];
-    strncpy(method, haystack, needle - haystack);
-    method[needle - haystack] = '\0';
-
-    // find second SP in request-line
-    haystack = needle + 1;
-    needle = strchr(haystack, ' ');
-    if (needle == NULL)
-    {
-        error(400);
-        return false;
-    }
-
-    // extract request-target
-    char target[needle - haystack + 1];
-    strncpy(target, haystack, needle - haystack);
-    target[needle - haystack] = '\0';
-
-    // find first CRLF in request-line
-    haystack = needle + 1;
-    needle = strstr(haystack, "\r\n");
-    if (needle == NULL)
-    {
-        error(414);
-        return false;
-    }
-
-    // extract HTTP-version
-    char version[needle - haystack + 1];
-    strncpy(version, haystack, needle - haystack);
-    version[needle - haystack] = '\0';
-
-    // ensure request's method is GET
-    if (strcmp("GET", method) != 0)
-    {
-        error(405);
-        return false;
-    }
-
-    // ensure request-target starts with absolute-path
-    if (target[0] != '/')
-    {
-        error(501);
-        return false;
-    }
-
-    // ensure request-target is safe
-    // http://www.rfc-editor.org/rfc/rfc3986.txt
-    if (strchr(target, '"') != NULL)
-    {
-        error(400);
-        return false;
-    }
-
-    // ensure HTTP-version is HTTP/1.1
-    if (strcmp("HTTP/1.1", version) != 0)
-    {
-        error(505);
-        return false;
-    }
-
-    // find end of absolute-path in request-target
-    haystack = target;
-    needle = strchr(haystack, '?');
-    if (needle == NULL)
-    {
-        needle = target + strlen(target);
-    }
-
-    // extract absolute-path 
-    strncpy(abs_path, target, needle - haystack);
-    abs_path[needle - haystack] = '\0';
-
-    // find start of query in request-target
-    if (*needle == '?')
-    {
-        needle = needle + 1;
-    }
-
-    // extract query
-    strcpy(query, needle);
-
-    // parsed
-    return true;
+    // TODO 
+    return false;
 }
 
 /**
