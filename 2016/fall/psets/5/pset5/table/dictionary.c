@@ -35,7 +35,7 @@ unsigned int words = 0;
 
 /**
  * Hashes word using its first character, returning value in [0,25].
- * Assumes word is alphabetical and lowercase and of length >= 1.
+ * Assumes word is alphabetical and of length >= 1.
  */
 int hash(const char* word)
 {
