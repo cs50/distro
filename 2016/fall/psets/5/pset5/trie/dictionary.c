@@ -26,7 +26,7 @@ typedef struct node
 node;
 
 // trie
-node trie;
+node* trie = NULL;
 
 // number of words in dictionary
 unsigned int words = 0;
@@ -52,25 +52,23 @@ int hash(char c)
  */
 bool check(const char* word)
 {
-    // start at root of trie
-    node* n = &trie;
-
-    // hash word one character at a time
-    for (int i = 0, len = strlen(word); i < len; i++)
+    // look for word in trie
+    node* current = trie;
+    for (int i = 0, n = strlen(word); i < n; i++)
     {
         // hash i'th character of word
         int index = hash(word[i]);
 
         // index into trie
-        if (n->children[index] == NULL)
+        if (current->children[index] == NULL)
         {
             return false;
         }
-        n = n->children[index];
+        current = current->children[index];
     }
     
-    // return whether n marks the end of a word
-    return n->word;
+    // return whether node marks the end of a word
+    return current->word;
 }
 
 /**
@@ -78,11 +76,16 @@ bool check(const char* word)
  */
 bool load(const char* dictionary)
 {
-    // initialize trie
-    trie.word = false;
+    // allocate root of trie
+    trie = malloc(sizeof(node));
+    if (trie == NULL)
+    {
+        return false;
+    }
+    trie->word = false;
     for (int i = 0; i < CHILDREN; i++)
     {
-        trie.children[i] = NULL;
+        trie->children[i] = NULL;
     }
 
     // open dictionary
@@ -98,15 +101,32 @@ bool load(const char* dictionary)
     // iterate over words in dictionary
     while (fscanf(file, "%s", word) != EOF)
     {
-        // allocate node
-        node* n = malloc(sizeof(node));
-        if (n == NULL)
+        // insert word into trie
+        node* current = trie;
+        for (int i = 0, n = strlen(word); i < n; i++)
         {
-            unload();
-            return false;
+            // hash i'th character of word
+            int index = hash(word[i]);
+
+            // index into trie
+            if (current->children[index] == NULL)
+            {
+                // allocate node
+                node* new = malloc(sizeof(node));
+                if (new == NULL)
+                {
+                    unload();
+                    return false;
+                }
+
+                // insert node into trie
+                current->children[index] = new;
+            }
+            current = current->children[index];
         }
 
-        // TODO: insert node into trie
+        // flag word as inserted
+        current->word = true;
  
         // update hash table's size
         words++;
@@ -131,17 +151,17 @@ unsigned int size(void)
 /**
  * Helper function for unload that recurses over node's descendants. 
  */
-void helper(node* n)
+void helper(node* current)
 {
-    if (n == NULL)
+    if (current == NULL)
     {
         return;
     }
     for (int i = 0; i < CHILDREN; i++)
     {
-        helper(n->children[i]);
+        helper(current->children[i]);
     }
-    free(n);
+    free(current);
 }
 
 /**
@@ -149,9 +169,6 @@ void helper(node* n)
  */
 bool unload(void)
 {
-    for (int i = 0; i < CHILDREN; i++)
-    {
-        helper(trie.children[i]);
-    }
+    helper(trie);
     return true;
 }

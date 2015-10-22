@@ -51,16 +51,16 @@ bool check(const char* word)
     int index = hash(word);
 
     // index into hash table
-    node* n = table[index];
+    node* current = table[index];
 
     // iterate over chain, looking for word
-    while (n != NULL)
+    while (current != NULL)
     {
-        if (strcasecmp(n->word, word) == 0)
+        if (strcasecmp(current->word, word) == 0)
         {
             return true;
         }
-        n = n->next;
+        current = current->next;
     }
 
     // is not in dictionary
@@ -92,20 +92,20 @@ bool load(const char* dictionary)
     while (fscanf(file, "%s", word) != EOF)
     {
         // allocate node
-        node* n = malloc(sizeof(node));
-        if (n == NULL)
+        node* new = malloc(sizeof(node));
+        if (new == NULL)
         {
             unload();
             return false;
         }
 
         // copy word into node
-        strcpy(n->word, word);
+        strcpy(new->word, word);
 
         // insert node into hash table at start of a chain
         int index = hash(word);
-        n->next = table[index];
-        table[index] = n;
+        new->next = table[index];
+        table[index] = new;
 
         // update hash table's size
         words++;
