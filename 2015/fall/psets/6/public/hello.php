@@ -5,6 +5,10 @@
         <title>hello</title>
     </head>
     <body>
-        hello, <?= htmlspecialchars($_GET["name"]) ?>
+        <?php if (!empty($_GET["name"])): ?>
+            hello, <?= htmlspecialchars($_GET["name"]) ?>
+        <?php else: ?>
+            hello, world
+        <?php endif ?>
     </body>
 </html>

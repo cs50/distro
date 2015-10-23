@@ -4,8 +4,6 @@
 // Computer Science 50
 // Problem Set 6
 //
-// TODO: get rid of Content-Length?
-// TODO: check return values of sprintf
 
 // feature test macro requirements
 #define _GNU_SOURCE
@@ -33,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -48,10 +47,9 @@ void handler(int signal);
 char* htmlspecialchars(const char* s);
 bool load(FILE* file, octet** content, ssize_t* length);
 const char* lookup(const char* extension);
-ssize_t parse(void);
+octet* parse(void);
 const char* reason(int code);
 bool redirect(const char* uri);
-void reset(void);
 bool respond(int code, const char* headers, const char* body, int length);
 bool list(const char* path);
 void start(short port, const char* path);
@@ -63,8 +61,8 @@ char* root = NULL;
 // file descriptor for sockets
 int cfd = -1, sfd = -1;
 
-// buffer for request
-octet* request = NULL;
+// flag indicating whether control-c has been heard
+bool signaled = false;
 
 int main(int argc, char* argv[])
 {
@@ -113,18 +111,38 @@ int main(int argc, char* argv[])
     // listen for SIGINT (aka control-c)
     signal(SIGINT, handler);
 
+    // TODO: comment
+    octet* request = NULL;
+
     // accept connections one at a time
     while (true)
     {
-        // reset server's state
-        reset();
+        // check for control-c
+        if (signaled == true)
+        {
+            stop();
+        }
 
-        // wait until client is connected
+        // free last request, if any
+        if (request != NULL)
+        {
+            free(request);
+            request = NULL;
+        }
+
+        // close last client's socket, if any
+        if (cfd != -1)
+        {
+            close(cfd);
+            cfd = -1;
+        }
+
+        // check whether client has connected
         if (connected())
         {
             // parse client's HTTP request
-            ssize_t octets = parse();
-            if (octets == -1)
+            request = parse();
+            if (request == NULL)
             {
                 continue;
             }
@@ -263,27 +281,25 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            // path leads to directory
+            // path to directory
             struct stat sb;
             if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
             {
-                //
+                // redirect from absolute-path to absolute-path/
                 if (abs_path[strlen(abs_path) - 1] != '/')
                 {
                     char uri[strlen(abs_path) + 1 + 1];
                     strcpy(uri, abs_path);
                     strcat(uri, "/");
                     redirect(uri);
+                    continue;
                 }
 
                 // list directory entries
-                else
-                {
-                    list(path);
-                }
+                list(path);
             }
 
-            // path leads to file
+            // path to file
             else
             {
                 // extract file's extension
@@ -315,33 +331,32 @@ int main(int argc, char* argv[])
                         continue;
                     }
 
-                    // load interpreter's output
-                    octet* output;
-                    ssize_t size;
-                    if (load(file, &output, &size) == false)
+                    // load interpreter's content
+                    octet* content;
+                    ssize_t length;
+                    if (load(file, &content, &length) == false)
                     {
                         error(500, "TODO");
                         continue;
                     }
 
-                    // subtract php-cgi's headers from output's size to get body's length
-                    octet* haystack = output;
-                    octet* needle = memmem(haystack, size, "\r\n\r\n", 4);
+                    // subtract php-cgi's headers from content's length to get body's length
+                    octet* haystack = content;
+                    octet* needle = memmem(haystack, length, "\r\n\r\n", 4);
                     if (needle == NULL)
                     {
                         error(500, "TODO");
                         continue;
                     }
-                    size_t length = size - (needle - haystack + 4);
 
                     // extract headers
                     char headers[needle - haystack + 1];
-                    strncpy(headers, output, needle - haystack);
+                    strncpy(headers, content, needle - haystack);
                     headers[needle - haystack] = '\0';
 
-                    // respond with interpreter's output
-                    respond(200, headers, needle + 4, length);
-                    free(output);
+                    // respond with interpreter's content
+                    respond(200, headers, needle + 4, length - (needle - haystack + 4));
+                    free(content);
                 }
 
                 // static content
@@ -363,27 +378,27 @@ int main(int argc, char* argv[])
                         continue;
                     }
 
-                    // load file
-                    octet* body;
+                    // load file's content
+                    octet* content;
                     ssize_t length;
-                    if (load(file, &body, &length) == false)
+                    if (load(file, &content, &length) == false)
                     {
                         error(500, "TODO");
                         continue;
                     }
 
-                    //
-                    char* template = "Content-Length: %i\r\nContent-Type: %s\r\n";
-                    char headers[strlen(template) - 2 + ((int) log10(length) + 1) + strlen(type) + 1];
-                    if (sprintf(headers, template, length, type) < 0)
+                    // prepare response
+                    char* template = "Content-Type: %s\r\n";
+                    char headers[strlen(template) - 2 + strlen(type) + 1];
+                    if (sprintf(headers, template, type) < 0)
                     {
                         error(500, "TODO");
                         continue;
                     }
 
-                    // respond with file
-                    respond(200, headers, body, length);
-                    free(body);
+                    // respond with file's content
+                    respond(200, headers, content, length);
+                    free(content);
                 }
             }
         }
@@ -391,20 +406,35 @@ int main(int argc, char* argv[])
 }
 
 /**
- * Accepts a connection from a client, blocking (i.e., waiting) until one is heard.
- * Upon success, returns true; upon failure, returns false.
+ * Checks whether a client has connected to server.
  */
 bool connected(void)
 {
-    struct sockaddr_in cli_addr;
-    memset(&cli_addr, 0, sizeof(cli_addr));
-    socklen_t cli_len = sizeof(cli_addr);
-    cfd = accept(sfd, (struct sockaddr*) &cli_addr, &cli_len);
-    if (cfd == -1)
+    // add server's file descriptor to a set
+    fd_set rfds;
+    FD_ZERO(&rfds);
+    FD_SET(sfd, &rfds);
+
+    // listen for 1 second
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    int retval = select(sfd + 1, &rfds, NULL, NULL, &tv);
+
+    // accept connection if heard
+    if (retval > 0)
     {
-        return false;
+        struct sockaddr_in cli_addr;
+        memset(&cli_addr, 0, sizeof(cli_addr));
+        socklen_t cli_len = sizeof(cli_addr);
+        cfd = accept(sfd, (struct sockaddr*) &cli_addr, &cli_len);
+        if (cfd == -1)
+        {
+            return false;
+        }
+        return true;
     }
-    return true;
+    return false;
 }
 
 /**
@@ -431,21 +461,13 @@ bool error(unsigned short code, const char* message)
         return false;
     }
 
-    //
-    template = "Content-Length: %i\r\nContent-Type: html\r\n";
-    char headers[strlen(template) - 2 + ((int) log10(length) + 1) + 1];
-    if (sprintf(headers, template, length) < 0)
-    {
-        error(500, "TODO");
-        return false;
-    }
-
     // announce error
     printf("\033[33m");
     printf("%s", message);
     printf("\033[39m\n");
 
     // respond with error
+    char* headers = "Content-Type: html\r\n";
     return respond(code, headers, body, length);
 }
 
@@ -498,22 +520,15 @@ void freedir(struct dirent** namelist, int n)
  */
 void handler(int signal)
 {
-    // TODO: set global var
-
     // control-c
     if (signal == SIGINT)
     {
         // ensure this isn't considered an error
         // (as might otherwise happen after a recent 404)
+        /* TODO: decide if needed
         errno = 0;
-
-        // announce stop
-        printf("\033[33m");
-        printf("Stopping server\n");
-        printf("\033[39m");
-
-        // stop server
-        stop();
+        */
+        signaled = true;
     }
 }
 
@@ -586,11 +601,11 @@ bool list(const char* path)
     // free memory allocated by scandir
     freedir(namelist, n);
 
-    //
+    // prepare response
     const char* relative = path + strlen(root);
     char* template = "<html><head><title>%s</title></head><body><h1>%s</h1><ul>%s</ul></body></html>";
-    char content[strlen(template) - 2 + strlen(relative) - 2 + strlen(relative) - 2 + strlen(list) + 1];
-    int length = sprintf(content, template, relative, relative, list);
+    char body[strlen(template) - 2 + strlen(relative) - 2 + strlen(relative) - 2 + strlen(list) + 1];
+    int length = sprintf(body, template, relative, relative, list);
     if (length < 0)
     {
         free(list);
@@ -605,43 +620,23 @@ bool list(const char* path)
     // close directory
     closedir(dir);
 
-    //
-    template = "Content-Length: %i\r\nContent-Type: html\r\n";
-    char headers[strlen(template) - 2 + ((int) log10(length) + 1) + 1];
-    if (sprintf(headers, template, length) < 0)
-    {
-        error(500, "TODO");
-        return false;
-    }
-
     // respond with list
-    return respond(200, headers, content, length);
-
-    /*
-    // 
-    char child[strlen(path) + 1 + strlen(namelist[i]->d_name) + 1];
-    strcpy(child, path);
-    strcat(child, "/");
-    strcat(child, namelist[i]->d_name);
-
-    struct stat sb;
-    if (stat(child, &sb) == 0 && S_ISDIR(sb.st_mode))
-    {
-    }
-    */
+    char* headers = "Content-Type: html\r\n";
+    return respond(200, headers, body, length);
 }
 
 /**
- *
+ * Escapes string for HTML.
  */
 char* htmlspecialchars(const char* s)
 {
-    //
+    // check whether s is NULL
     if (s == NULL)
     {
         return NULL;
     }
 
+    // allocate enough space for an unescaped copy of s
     char* t = malloc(strlen(s) + 1);
     if (t == NULL)
     {
@@ -649,9 +644,10 @@ char* htmlspecialchars(const char* s)
     }
     t[0] = '\0';
 
-    // 
+    // iterate over characters in s, escaping as needed
     for (int i = 0, old = strlen(s), new = old; i < old; i++)
     {
+        // escape &
         if (s[i] == '&')
         {
             new += 5;
@@ -662,6 +658,8 @@ char* htmlspecialchars(const char* s)
             }
             strcat(t, "&amp;");
         }
+
+        // escape "
         else if (s[i] == '"')
         {
             new += 6;
@@ -672,6 +670,8 @@ char* htmlspecialchars(const char* s)
             }
             strcat(t, "&quot;");
         }
+
+        // escape '
         else if (s[i] == '\'')
         {
             new += 6;
@@ -682,6 +682,8 @@ char* htmlspecialchars(const char* s)
             }
             strcat(t, "&#039;");
         }
+
+        // escape <
         else if (s[i] == '<')
         {
             new += 4;
@@ -692,6 +694,8 @@ char* htmlspecialchars(const char* s)
             }
             strcat(t, "&lt;");
         }
+
+        // escape >
         else if (s[i] == '>')
         {
             new += 4;
@@ -702,17 +706,21 @@ char* htmlspecialchars(const char* s)
             }
             strcat(t, "&gt;");
         }
+
+        // don't escape
         else
         {
             strncat(t, s + i, 1);
         }
     }
 
+    // escaped string
     return t;
 }
 
 /**
- * Loads file into message-body.
+ * Loads file into dynamically allocated memory. Stores address
+ * thereof in *content and length thereof in *length.
  */
 bool load(FILE* file, octet** content, ssize_t* length)
 {
@@ -722,7 +730,7 @@ bool load(FILE* file, octet** content, ssize_t* length)
         return -1;
     }
 
-    // content and content's length
+    // initialize content and its length
     *content = NULL;
     *length = 0;
 
@@ -745,7 +753,7 @@ bool load(FILE* file, octet** content, ssize_t* length)
             return false;
         }
 
-        // if octets were read, append to body
+        // append octets to content
         if (octets > 0)
         {
             *content = realloc(*content, *length + octets);
@@ -824,24 +832,19 @@ const char* lookup(const char* extension)
 /**
  * Parses an HTTP request.
  */
-ssize_t parse(void)
+octet* parse(void)
 {
     // ensure client's socket is open
     if (cfd == -1)
     {
-        return -1;
-    }
-
-    // ensure request isn't already parsed
-    if (request != NULL)
-    {
-        return -1;
+        return NULL;
     }
 
     // buffer for octets
     octet buffer[OCTETS];
 
     // parse request
+    octet *request = NULL;
     ssize_t length = 0;
     while (true)
     {
@@ -849,8 +852,8 @@ ssize_t parse(void)
         ssize_t octets = read(cfd, buffer, sizeof(octet) * OCTETS);
         if (octets == -1)
         {
-            error(500, "TODO");
-            return -1;
+            // 500
+            return NULL;
         }
 
         // if octets have been read, remember new length
@@ -859,7 +862,8 @@ ssize_t parse(void)
             request = realloc(request, length + octets);
             if (request == NULL)
             {
-                return -1;
+                // 500
+                return NULL;
             }
             memcpy(request + length, buffer, octets);
             length += octets;
@@ -868,7 +872,7 @@ ssize_t parse(void)
         // else if nothing's been read, socket's been closed
         else
         {
-            return -1;
+            return NULL;
         }
 
         // search for CRLF CRLF
@@ -882,7 +886,8 @@ ssize_t parse(void)
             request = realloc(request, length);
             if (request == NULL)
             {
-                return -1;
+                // 500
+                return NULL;
             }
             request[length - 1] = '\0';
             break;
@@ -892,15 +897,15 @@ ssize_t parse(void)
         // then request is too large
         if (length - 1 >= LimitRequestLine + LimitRequestFields * LimitRequestFieldSize)
         {
-            error(413, "TODO");
-            return -1;
+            //error(413, "TODO");
+            return NULL;
         }
     }
-    return length;
+    return request;
 }
 
 /**
- *
+ * Redirects client to uri.
  */
 bool redirect(const char* uri)
 {
@@ -915,29 +920,7 @@ bool redirect(const char* uri)
 }
 
 /**
- * Resets server's state, deallocating any resources.
- */
-void reset(void)
-{
-    // TODO: decide if needed
-
-    // free request
-    if (request != NULL)
-    {
-        free(request);
-        request = NULL;
-    }
-
-    // close client's socket
-    if (cfd != -1)
-    {
-        close(cfd);
-        cfd = -1;
-    }
-}
-
-/**
- *
+ * Responds to a client with status code, headers, and body of specified length.
  */
 bool respond(int code, const char* headers, const char* body, int length)
 {
@@ -1068,8 +1051,10 @@ void stop(void)
     // preserve errno across this function's library calls
     int errsv = errno;
 
-    // reset server's state
-    reset();
+    // announce stop
+    printf("\033[33m");
+    printf("Stopping server\n");
+    printf("\033[39m");
 
     // free root, which was allocated by realpath
     if (root != NULL)
@@ -1083,20 +1068,6 @@ void stop(void)
         close(sfd);
     }
 
-    // terminate process
-    if (errsv == 0)
-    {
-        // success
-        exit(0);
-    }
-    else
-    {
-        // announce error
-        printf("\033[33m");
-        printf("%s", strerror(errsv));
-        printf("\033[39m\n");
-
-        // failure
-        exit(1);
-    }
+    // stop server
+    exit(errsv);
 }
