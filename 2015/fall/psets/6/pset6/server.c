@@ -281,7 +281,7 @@ int main(int argc, char* argv[])
                 continue;
             }
 
-            // path to directory
+            // a path to directory
             struct stat sb;
             if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
             {
@@ -299,7 +299,7 @@ int main(int argc, char* argv[])
                 list(path);
             }
 
-            // path to file
+            // a path to file
             else
             {
                 // extract file's extension
@@ -473,36 +473,6 @@ bool error(unsigned short code)
 }
 
 /**
- * Returns status code's reason phrase.
- *
- * http://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html#sec6
- * https://tools.ietf.org/html/rfc2324
- */
-const char* reason(unsigned short code)
-{
-    switch (code)
-    {
-        case 200: return "OK";
-        case 201: return "Created";
-        case 204: return "No Content";
-        case 301: return "Moved Permanently";
-        case 302: return "Found";
-        case 400: return "Bad Request";
-        case 403: return "Forbidden";
-        case 404: return "Not Found";
-        case 405: return "Method Not Allowed";
-        case 413: return "Request Entity Too Large";
-        case 414: return "Request-URI Too Long";
-        case 418: return "I'm a teapot";
-        case 500: return "Internal Server Error";
-        case 501: return "Not Implemented";
-        case 505: return "HTTP Version Not Supported";
-        default: return NULL;
-    }
-}
-
-
-/**
  * Frees memory allocated by scandir.
  */
 void freedir(struct dirent** namelist, int n)
@@ -527,99 +497,6 @@ void handler(int signal)
     {
         signaled = true;
     }
-}
-
-/**
- * Lists contents of directory at path.
- */
-bool list(const char* path)
-{
-    // ensure path is within root
-    if (strstr(path, root) == NULL)
-    {
-        return false;
-    }
-
-    // open directory
-    DIR* dir = opendir(path);
-    if (dir == NULL)
-    {
-        return false;
-    }
-
-    // buffer for list items
-    char* list = malloc(1);
-    list[0] = '\0';
-
-    // iterate over directory entries
-    struct dirent** namelist = NULL;
-    int n = scandir(path, &namelist, NULL, alphasort);
-    for (int i = 0; i < n; i++)
-    {
-        // omit . from list
-        if (strcmp(namelist[i]->d_name, ".") == 0)
-        {
-            continue;
-        }
-
-        // escape entry's name
-        char* name = htmlspecialchars(namelist[i]->d_name);
-        if (name == NULL)
-        {
-            free(list);
-            freedir(namelist, n);
-            error(500);
-            return false;
-        }
-
-        // append list item to buffer
-        char* template = "<li><a href=\"%s\">%s</a></li>";
-        list = realloc(list, strlen(list) + strlen(template) - 2 + strlen(name) - 2 + strlen(name) + 1);
-        if (list == NULL)
-        {
-            free(name);
-            freedir(namelist, n);
-            error(500);
-            return false;
-        }
-        if (sprintf(list + strlen(list), template, name, name) < 0)
-        {
-            free(name);
-            freedir(namelist, n);
-            free(list);
-            error(500);
-            return false;
-        }
-
-        // free escaped name
-        free(name);
-    }
-
-    // free memory allocated by scandir
-    freedir(namelist, n);
-
-    // prepare response
-    const char* relative = path + strlen(root);
-    char* template = "<html><head><title>%s</title></head><body><h1>%s</h1><ul>%s</ul></body></html>";
-    char body[strlen(template) - 2 + strlen(relative) - 2 + strlen(relative) - 2 + strlen(list) + 1];
-    int length = sprintf(body, template, relative, relative, list);
-    if (length < 0)
-    {
-        free(list);
-        closedir(dir);
-        error(500);
-        return false;
-    }
-
-    // free buffer
-    free(list);
-
-    // close directory
-    closedir(dir);
-
-    // respond with list
-    char* headers = "Content-Type: html\r\n";
-    return respond(200, headers, body, length);
 }
 
 /**
@@ -713,6 +590,99 @@ char* htmlspecialchars(const char* s)
 
     // escaped string
     return t;
+}
+
+/**
+ * Lists contents of directory at path.
+ */
+bool list(const char* path)
+{
+    // ensure path is within root
+    if (strstr(path, root) == NULL)
+    {
+        return false;
+    }
+
+    // open directory
+    DIR* dir = opendir(path);
+    if (dir == NULL)
+    {
+        return false;
+    }
+
+    // buffer for list items
+    char* list = malloc(1);
+    list[0] = '\0';
+
+    // iterate over directory entries
+    struct dirent** namelist = NULL;
+    int n = scandir(path, &namelist, NULL, alphasort);
+    for (int i = 0; i < n; i++)
+    {
+        // omit . from list
+        if (strcmp(namelist[i]->d_name, ".") == 0)
+        {
+            continue;
+        }
+
+        // escape entry's name
+        char* name = htmlspecialchars(namelist[i]->d_name);
+        if (name == NULL)
+        {
+            free(list);
+            freedir(namelist, n);
+            error(500);
+            return false;
+        }
+
+        // append list item to buffer
+        char* template = "<li><a href=\"%s\">%s</a></li>";
+        list = realloc(list, strlen(list) + strlen(template) - 2 + strlen(name) - 2 + strlen(name) + 1);
+        if (list == NULL)
+        {
+            free(name);
+            freedir(namelist, n);
+            error(500);
+            return false;
+        }
+        if (sprintf(list + strlen(list), template, name, name) < 0)
+        {
+            free(name);
+            freedir(namelist, n);
+            free(list);
+            error(500);
+            return false;
+        }
+
+        // free escaped name
+        free(name);
+    }
+
+    // free memory allocated by scandir
+    freedir(namelist, n);
+
+    // prepare response
+    const char* relative = path + strlen(root);
+    char* template = "<html><head><title>%s</title></head><body><h1>%s</h1><ul>%s</ul></body></html>";
+    char body[strlen(template) - 2 + strlen(relative) - 2 + strlen(relative) - 2 + strlen(list) + 1];
+    int length = sprintf(body, template, relative, relative, list);
+    if (length < 0)
+    {
+        free(list);
+        closedir(dir);
+        error(500);
+        return false;
+    }
+
+    // free buffer
+    free(list);
+
+    // close directory
+    closedir(dir);
+
+    // respond with list
+    char* headers = "Content-Type: html\r\n";
+    return respond(200, headers, body, length);
 }
 
 /**
@@ -899,6 +869,35 @@ octet* parse(void)
         }
     }
     return request;
+}
+
+/**
+ * Returns status code's reason phrase.
+ *
+ * http://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html#sec6
+ * https://tools.ietf.org/html/rfc2324
+ */
+const char* reason(unsigned short code)
+{
+    switch (code)
+    {
+        case 200: return "OK";
+        case 201: return "Created";
+        case 204: return "No Content";
+        case 301: return "Moved Permanently";
+        case 302: return "Found";
+        case 400: return "Bad Request";
+        case 403: return "Forbidden";
+        case 404: return "Not Found";
+        case 405: return "Method Not Allowed";
+        case 413: return "Request Entity Too Large";
+        case 414: return "Request-URI Too Long";
+        case 418: return "I'm a teapot";
+        case 500: return "Internal Server Error";
+        case 501: return "Not Implemented";
+        case 505: return "HTTP Version Not Supported";
+        default: return NULL;
+    }
 }
 
 /**
