@@ -4,6 +4,8 @@
 // Computer Science 50
 // Problem Set 6
 //
+// TODO: get rid of Content-Length?
+// TODO: check return values of sprintf
 
 // feature test macro requirements
 #define _GNU_SOURCE
@@ -40,12 +42,17 @@ typedef char octet;
 
 // prototypes
 bool connected(void);
-bool error(unsigned short code);
+bool error(unsigned short code, const char* message);
+void freedir(struct dirent** namelist, int n);
 void handler(int signal);
-ssize_t load(void);
+char* htmlspecialchars(const char* s);
+bool load(FILE* file, octet** content, ssize_t* length);
 const char* lookup(const char* extension);
 ssize_t parse(void);
+const char* reason(int code);
+bool redirect(const char* uri);
 void reset(void);
+bool respond(int code, const char* headers, const char* body, int length);
 bool list(const char* path);
 void start(short port, const char* path);
 void stop(void);
@@ -58,12 +65,6 @@ int cfd = -1, sfd = -1;
 
 // buffer for request
 octet* request = NULL;
-
-// FILE pointer for files
-FILE* file = NULL;
-
-// buffer for response-body
-octet* body = NULL;
 
 int main(int argc, char* argv[])
 {
@@ -134,12 +135,12 @@ int main(int argc, char* argv[])
             char* needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
-                error(400);
+                error(400, "TODO");
                 continue;
             }
             else if (needle - haystack + 2 > LimitRequestLine)
             {
-                error(414);
+                error(414, "TODO");
                 continue;
             }   
             char line[needle - haystack + 2 + 1];
@@ -154,7 +155,7 @@ int main(int argc, char* argv[])
             needle = strchr(haystack, ' ');
             if (needle == NULL)
             {
-                error(400);
+                error(400, "TODO");
                 continue;
             }
 
@@ -168,7 +169,7 @@ int main(int argc, char* argv[])
             needle = strchr(haystack, ' ');
             if (needle == NULL)
             {
-                error(400);
+                error(400, "TODO");
                 continue;
             }
 
@@ -182,7 +183,7 @@ int main(int argc, char* argv[])
             needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
-                error(414);
+                error(414, "TODO");
                 continue;
             }
 
@@ -194,14 +195,14 @@ int main(int argc, char* argv[])
             // ensure request's method is GET
             if (strcmp("GET", method) != 0)
             {
-                error(405);
+                error(405, "TODO");
                 continue;
             }
 
             // ensure request-target starts with absolute-path
             if (target[0] != '/')
             {
-                error(501);
+                error(501, "TODO");
                 continue;
             }
 
@@ -209,14 +210,14 @@ int main(int argc, char* argv[])
             // http://www.rfc-editor.org/rfc/rfc3986.txt
             if (strchr(target, '"') != NULL)
             {
-                error(400);
+                error(400, "TODO");
                 continue;
             }
 
             // ensure HTTP-version is HTTP/1.1
             if (strcmp("HTTP/1.1", version) != 0)
             {
-                error(505);
+                error(505, "TODO");
                 continue;
             }
 
@@ -251,25 +252,38 @@ int main(int argc, char* argv[])
             // ensure file exists
             if (access(path, F_OK) == -1)
             {
-                error(404);
+                error(404, "TODO");
                 continue;
             }
 
             // ensure file is readable
             if (access(path, R_OK) == -1)
             {
-                error(403);
+                error(403, "TODO");
                 continue;
             }
 
-            // directory
+            // path leads to directory
             struct stat sb;
             if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
             {
-                // open directory
-                list(path);
+                //
+                if (abs_path[strlen(abs_path) - 1] != '/')
+                {
+                    char uri[strlen(abs_path) + 1 + 1];
+                    strcpy(uri, abs_path);
+                    strcat(uri, "/");
+                    redirect(uri);
+                }
+
+                // list directory entries
+                else
+                {
+                    list(path);
+                }
             }
 
+            // path leads to file
             else
             {
                 // extract file's extension
@@ -277,7 +291,7 @@ int main(int argc, char* argv[])
                 needle = strrchr(haystack, '.');
                 if (needle == NULL)
                 {
-                    error(501);
+                    error(501, "TODO");
                     continue;
                 }
                 char extension[strlen(needle + 1) + 1];
@@ -289,49 +303,45 @@ int main(int argc, char* argv[])
                     // open pipe to PHP interpreter
                     char* format = "QUERY_STRING=\"%s\" REDIRECT_STATUS=200 SCRIPT_FILENAME=\"%s\" php-cgi";
                     char command[strlen(format) + (strlen(path) - 2) + (strlen(query) - 2) + 1];
-                    sprintf(command, format, query, path);
-                    file = popen(command, "r");
+                    if (sprintf(command, format, query, path) < 0)
+                    {
+                        error(500, "TODO");
+                        continue;
+                    }
+                    FILE* file = popen(command, "r");
                     if (file == NULL)
                     {
-                        error(500);
+                        error(500, "TODO");
                         continue;
                     }
 
-                    // load file
-                    ssize_t size = load();
-                    if (size == -1)
+                    // load interpreter's output
+                    octet* output;
+                    ssize_t size;
+                    if (load(file, &output, &size) == false)
                     {
-                        error(500);
+                        error(500, "TODO");
                         continue;
                     }
 
-                    // subtract php-cgi's headers from body's size to get content's length
-                    haystack = body;
-                    needle = memmem(haystack, size, "\r\n\r\n", 4);
+                    // subtract php-cgi's headers from output's size to get body's length
+                    octet* haystack = output;
+                    octet* needle = memmem(haystack, size, "\r\n\r\n", 4);
                     if (needle == NULL)
                     {
-                        error(500);
+                        error(500, "TODO");
                         continue;
                     }
                     size_t length = size - (needle - haystack + 4);
 
-                    // respond to client
-                    if (dprintf(cfd, "HTTP/1.1 200 OK\r\n") < 0)
-                    {
-                        continue;
-                    }
-                    if (dprintf(cfd, "Connection: close\r\n") < 0)
-                    {
-                        continue;
-                    }
-                    if (dprintf(cfd, "Content-Length: %i\r\n", length) < 0)
-                    {
-                        continue;
-                    }
-                    if (write(cfd, body, size) == -1)
-                    {
-                        continue;
-                    }
+                    // extract headers
+                    char headers[needle - haystack + 1];
+                    strncpy(headers, output, needle - haystack);
+                    headers[needle - haystack] = '\0';
+
+                    // respond with interpreter's output
+                    respond(200, headers, needle + 4, length);
+                    free(output);
                 }
 
                 // static content
@@ -341,58 +351,41 @@ int main(int argc, char* argv[])
                     const char* type = lookup(extension);
                     if (type == NULL)
                     {
-                        error(501);
+                        error(501, "TODO");
                         continue;
                     }
 
                     // open file
-                    file = fopen(path, "r");
+                    FILE* file = fopen(path, "r");
                     if (file == NULL)
                     {
-                        error(500);
+                        error(500, "TODO");
                         continue;
                     }
 
                     // load file
-                    ssize_t length = load();
-                    if (length == -1)
+                    octet* body;
+                    ssize_t length;
+                    if (load(file, &body, &length) == false)
                     {
-                        error(500);
+                        error(500, "TODO");
                         continue;
                     }
 
-                    // respond to client
-                    if (dprintf(cfd, "HTTP/1.1 200 OK\r\n") < 0)
+                    //
+                    char* template = "Content-Length: %i\r\nContent-Type: %s\r\n";
+                    char headers[strlen(template) - 2 + ((int) log10(length) + 1) + strlen(type) + 1];
+                    if (sprintf(headers, template, length, type) < 0)
                     {
+                        error(500, "TODO");
                         continue;
                     }
-                    if (dprintf(cfd, "Connection: close\r\n") < 0)
-                    {
-                        continue;
-                    }
-                    if (dprintf(cfd, "Content-Length: %i\r\n", length) < 0)
-                    {
-                        continue;
-                    }
-                    if (dprintf(cfd, "Content-Type: %s\r\n", type) < 0)
-                    {
-                        continue;
-                    }
-                    if (dprintf(cfd, "\r\n") < 0)
-                    {
-                        continue;
-                    }
-                    if (write(cfd, body, length) == -1)
-                    {
-                        continue;
-                    }
+
+                    // respond with file
+                    respond(200, headers, body, length);
+                    free(body);
                 }
             }
-
-            // announce OK
-            printf("\033[32m");
-            printf("HTTP/1.1 200 OK");
-            printf("\033[39m\n");
         }
     }
 }
@@ -415,97 +408,98 @@ bool connected(void)
 }
 
 /**
- * Handles client errors (4xx) and server errors (5xx).
+ *
  */
-bool error(unsigned short code)
+bool error(unsigned short code, const char* message)
 {
-    // ensure client's socket is open
-    if (cfd == -1)
-    {
-        return false;
-    }
-
-    // ensure code is within range
-    if (code < 400 || code > 599)
-    {
-        return false;
-    }
-
-    // determine Status-Line's phrase
-    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html#sec6.1
-    const char* phrase = NULL;
-    switch (code)
-    {
-        case 400: phrase = "Bad Request"; break;
-        case 403: phrase = "Forbidden"; break;
-        case 404: phrase = "Not Found"; break;
-        case 405: phrase = "Method Not Allowed"; break;
-        case 413: phrase = "Request Entity Too Large"; break;
-        case 414: phrase = "Request-URI Too Long"; break;
-        case 418: phrase = "I'm a teapot"; break;
-        case 500: phrase = "Internal Server Error"; break;
-        case 501: phrase = "Not Implemented"; break;
-        case 505: phrase = "HTTP Version Not Supported"; break;
-    }
+    // determine code's reason-phrase
+    const char* phrase = reason(code);
     if (phrase == NULL)
     {
         return false;
     }
 
-    // template
-    char* template = "<html><head><title>%i %s</title></head><body><h1>%i %s</h1></body></html>";
-    char content[strlen(template) + 2 * ((int) log10(code) + 1 - 2) + 2 * (strlen(phrase) - 2) + 1];
-    int length = sprintf(content, template, code, phrase, code, phrase);
+    // template for response's content
+    char* template = "<html><head><title>%i %s</title></head><body><h1>%i %s</h1><h2>%s</h2></body></html>";
 
-    // respond with Status-Line
-    if (dprintf(cfd, "HTTP/1.1 %i %s\r\n", code, phrase) < 0)
+    // render template
+    char body[(strlen(template) - 2 - ((int) log10(code) + 1) - 2 + strlen(phrase)) * 2 - 2 + strlen(message) + 1];
+    int length = sprintf(body, template, code, phrase, code, phrase, message);
+    if (length < 0)
     {
+        error(500, "TODO");
         return false;
     }
 
-    // respond with Connection header
-    if (dprintf(cfd, "Connection: close\r\n") < 0)
+    //
+    template = "Content-Length: %i\r\nContent-Type: html\r\n";
+    char headers[strlen(template) - 2 + ((int) log10(length) + 1) + 1];
+    if (sprintf(headers, template, length) < 0)
     {
+        error(500, "TODO");
         return false;
     }
 
-    // respond with Content-Length header
-    if (dprintf(cfd, "Content-Length: %i\r\n", length) < 0)
-    {
-        return false;
-    }
-
-    // respond with Content-Type header
-    if (dprintf(cfd, "Content-Type: text/html\r\n") < 0)
-    {
-        return false;
-    }
-
-    // respond with CRLF
-    if (dprintf(cfd, "\r\n") < 0)
-    {
-        return false;
-    }
-
-    // respond with message-body
-    if (write(cfd, content, length) == -1)
-    {
-        return false;
-    }
-
-    // announce status-line
-    printf("\033[31m");
-    printf("HTTP/1.1 %i %s", code, phrase);
+    // announce error
+    printf("\033[33m");
+    printf("%s", message);
     printf("\033[39m\n");
 
-    return true;
+    // respond with error
+    return respond(code, headers, body, length);
 }
 
+/**
+ *
+ * http://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html#sec6
+ * https://tools.ietf.org/html/rfc2324
+ */
+const char* reason(int code)
+{
+    switch (code)
+    {
+        case 200: return "OK";
+        case 201: return "Created";
+        case 204: return "No Content";
+        case 301: return "Moved Permanently";
+        case 302: return "Found";
+        case 400: return "Bad Request";
+        case 403: return "Forbidden";
+        case 404: return "Not Found";
+        case 405: return "Method Not Allowed";
+        case 413: return "Request Entity Too Large";
+        case 414: return "Request-URI Too Long";
+        case 418: return "I'm a teapot";
+        case 500: return "Internal Server Error";
+        case 501: return "Not Implemented";
+        case 505: return "HTTP Version Not Supported";
+        default: return NULL;
+    }
+}
+
+
+/**
+ * Frees memory allocated by scandir.
+ */
+void freedir(struct dirent** namelist, int n)
+{
+    if (namelist != NULL)
+    {
+        for (int i = 0; i < n; i++)
+        {
+            free(namelist[i]);
+        }
+        free(namelist);
+    }
+}
+ 
 /**
  * Handles signals.
  */
 void handler(int signal)
 {
+    // TODO: set global var
+
     // control-c
     if (signal == SIGINT)
     {
@@ -528,75 +522,199 @@ void handler(int signal)
  */
 bool list(const char* path)
 {
+    // ensure path is within root
+    if (strstr(path, root) == NULL)
+    {
+        return false;
+    }
+
+    // open directory
     DIR* dir = opendir(path);
     if (dir == NULL)
     {
-        error(403);
         return false;
     }
 
-    // respond to client
-    if (dprintf(cfd, "HTTP/1.1 200 OK\r\n") < 0)
-    {
-        return false;
-    }
+    // buffer for list items
+    char* list = malloc(1);
+    list[0] = '\0';
 
-    if (dprintf(cfd, "Connection: close\r\n") < 0)
-    {
-        return false;
-    }
-
-    /*
-    if (dprintf(cfd, "Content-Length: %i\r\n", length) < 0)
-    {
-        continue;
-    }
-    */
-    
-    // respond with CRLF
-    if (dprintf(cfd, "\r\n") < 0)
-    {
-        return false;
-    }
-
-    // 
-    if (dprintf(cfd, "<html><head><title>%s</title></head><body><h1>%s</h1><ul>", path, path) < 0)
-    {
-        return false;
-    }
-
-    struct dirent** namelist;
+    // iterate over directory entries
+    struct dirent** namelist = NULL;
     int n = scandir(path, &namelist, NULL, alphasort);
     for (int i = 0; i < n; i++)
     {
-        // omit .
+        // omit . from list
         if (strcmp(namelist[i]->d_name, ".") == 0)
         {
             continue;
         }
 
-        // 
-        if (dprintf(cfd, "<li><a href=\"%s\">%s</a></li>", namelist[i]->d_name, namelist[i]->d_name) < 0)
+        // escape entry's name
+        char* name = htmlspecialchars(namelist[i]->d_name);
+        if (name == NULL)
         {
+            free(list);
+            freedir(namelist, n);
+            error(500, "TODO");
             return false;
         }
+
+        // append list item to buffer
+        char* template = "<li><a href=\"%s\">%s</a></li>";
+        list = realloc(list, strlen(list) + strlen(template) - 2 + strlen(name) - 2 + strlen(name) + 1);
+        if (list == NULL)
+        {
+            free(name);
+            freedir(namelist, n);
+            error(500, "unable to resize buffer");
+            return false;
+        }
+        if (sprintf(list + strlen(list), template, name, name) < 0)
+        {
+            free(name);
+            freedir(namelist, n);
+            free(list);
+            error(500, "unable to append list item to buffer");
+            return false;
+        }
+
+        // free escaped name
+        free(name);
     }
 
-    if (dprintf(cfd, "</ul></body></html>") < 0)
+    // free memory allocated by scandir
+    freedir(namelist, n);
+
+    //
+    const char* relative = path + strlen(root);
+    char* template = "<html><head><title>%s</title></head><body><h1>%s</h1><ul>%s</ul></body></html>";
+    char content[strlen(template) - 2 + strlen(relative) - 2 + strlen(relative) - 2 + strlen(list) + 1];
+    int length = sprintf(content, template, relative, relative, list);
+    if (length < 0)
     {
+        free(list);
+        closedir(dir);
+        error(500, "TODO");
         return false;
     }
+
+    // free buffer
+    free(list);
 
     // close directory
     closedir(dir);
 
-    return true;
+    //
+    template = "Content-Length: %i\r\nContent-Type: html\r\n";
+    char headers[strlen(template) - 2 + ((int) log10(length) + 1) + 1];
+    if (sprintf(headers, template, length) < 0)
+    {
+        error(500, "TODO");
+        return false;
+    }
+
+    // respond with list
+    return respond(200, headers, content, length);
+
+    /*
+    // 
+    char child[strlen(path) + 1 + strlen(namelist[i]->d_name) + 1];
+    strcpy(child, path);
+    strcat(child, "/");
+    strcat(child, namelist[i]->d_name);
+
+    struct stat sb;
+    if (stat(child, &sb) == 0 && S_ISDIR(sb.st_mode))
+    {
+    }
+    */
+}
+
+/**
+ *
+ */
+char* htmlspecialchars(const char* s)
+{
+    //
+    if (s == NULL)
+    {
+        return NULL;
+    }
+
+    char* t = malloc(strlen(s) + 1);
+    if (t == NULL)
+    {
+        return NULL;
+    }
+    t[0] = '\0';
+
+    // 
+    for (int i = 0, old = strlen(s), new = old; i < old; i++)
+    {
+        if (s[i] == '&')
+        {
+            new += 5;
+            t = realloc(t, new);
+            if (t == NULL)
+            {
+                return NULL;
+            }
+            strcat(t, "&amp;");
+        }
+        else if (s[i] == '"')
+        {
+            new += 6;
+            t = realloc(t, new);
+            if (t == NULL)
+            {
+                return NULL;
+            }
+            strcat(t, "&quot;");
+        }
+        else if (s[i] == '\'')
+        {
+            new += 6;
+            t = realloc(t, new);
+            if (t == NULL)
+            {
+                return NULL;
+            }
+            strcat(t, "&#039;");
+        }
+        else if (s[i] == '<')
+        {
+            new += 4;
+            t = realloc(t, new);
+            if (t == NULL)
+            {
+                return NULL;
+            }
+            strcat(t, "&lt;");
+        }
+        else if (s[i] == '>')
+        {
+            new += 4;
+            t = realloc(t, new);
+            if (t == NULL)
+            {
+                return NULL;
+            }
+            strcat(t, "&gt;");
+        }
+        else
+        {
+            strncat(t, s + i, 1);
+        }
+    }
+
+    return t;
 }
 
 /**
  * Loads file into message-body.
  */
-ssize_t load(void)
+bool load(FILE* file, octet** content, ssize_t* length)
 {
     // ensure file is open
     if (file == NULL)
@@ -604,43 +722,40 @@ ssize_t load(void)
         return -1;
     }
 
-    // ensure body isn't already loaded
-    if (body != NULL)
-    {
-        return -1;
-    }
-
-    // buffer for octets
-    octet buffer[OCTETS];
+    // content and content's length
+    *content = NULL;
+    *length = 0;
 
     // read file
-    ssize_t size = 0;
     while (true)
     {
         // try to read a buffer's worth of octets
+        octet buffer[OCTETS];
         ssize_t octets = fread(buffer, sizeof(octet), OCTETS, file);
 
         // check for error
         if (ferror(file) != 0)
         {
-            if (body != NULL)
+            if (*content != NULL)
             {
-                free(body);
-                body = NULL;
+                free(*content);
+                *content = NULL;
+                *length = 0;
             }
-            return -1;
+            return false;
         }
 
         // if octets were read, append to body
         if (octets > 0)
         {
-            body = realloc(body, size + octets);
-            if (body == NULL)
+            *content = realloc(*content, *length + octets);
+            if (*content == NULL)
             {
-                return -1;
+                *length = 0;
+                return false;
             }
-            memcpy(body + size, buffer, octets);
-            size += octets;
+            memcpy(*content + *length, buffer, octets);
+            *length += octets;
         }
 
         // check for EOF
@@ -649,7 +764,7 @@ ssize_t load(void)
             break;
         }
     }
-    return size;
+    return true;
 }
 
 /**
@@ -734,7 +849,7 @@ ssize_t parse(void)
         ssize_t octets = read(cfd, buffer, sizeof(octet) * OCTETS);
         if (octets == -1)
         {
-            error(500);
+            error(500, "TODO");
             return -1;
         }
 
@@ -777,7 +892,7 @@ ssize_t parse(void)
         // then request is too large
         if (length - 1 >= LimitRequestLine + LimitRequestFields * LimitRequestFieldSize)
         {
-            error(413);
+            error(413, "TODO");
             return -1;
         }
     }
@@ -785,23 +900,26 @@ ssize_t parse(void)
 }
 
 /**
+ *
+ */
+bool redirect(const char* uri)
+{
+    char* template = "Location: %s\r\n";
+    char headers[strlen(template) - 2 + strlen(uri) + 1];
+    if (sprintf(headers, template, uri) < 0)
+    {
+        error(500, "TODO");
+        return false;
+    }
+    return respond(301, headers, NULL, 0);
+}
+
+/**
  * Resets server's state, deallocating any resources.
  */
 void reset(void)
 {
-    // free response's body
-    if (body != NULL)
-    {
-        free(body);
-        body = NULL;
-    }
-
-    // close file
-    if (file != NULL)
-    {
-        fclose(file);
-        file = NULL;
-    }
+    // TODO: decide if needed
 
     // free request
     if (request != NULL)
@@ -816,6 +934,61 @@ void reset(void)
         close(cfd);
         cfd = -1;
     }
+}
+
+/**
+ *
+ */
+bool respond(int code, const char* headers, const char* body, int length)
+{
+    // determine Status-Line's phrase
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html#sec6.1
+    const char* phrase = reason(code);
+    if (phrase == NULL)
+    {
+        return false;
+    }
+
+    // respond with Status-Line
+    if (dprintf(cfd, "HTTP/1.1 %i %s\r\n", code, phrase) < 0)
+    {
+        return false;
+    }
+
+    // respond with headers
+    if (dprintf(cfd, "%s", headers) < 0)
+    {
+        return false;
+    }
+
+    // respond with CRLF
+    if (dprintf(cfd, "\r\n") < 0)
+    {
+        return false;
+    }
+
+    // respond with body
+    if (write(cfd, body, length) == -1)
+    {
+        return false;
+    }
+
+    // log response
+    if (code == 200)
+    {
+        // green
+        printf("\033[32m");
+    }
+    else
+    {
+        // red
+        printf("\033[33m");
+    }
+    printf("HTTP/1.1 %i %s", code, phrase);
+    printf("\033[39m\n");
+
+    // responded
+    return true;
 }
 
 /**
