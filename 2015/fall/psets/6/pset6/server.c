@@ -4,6 +4,10 @@
 // Computer Science 50
 // Problem Set 6
 //
+// TODO: make cfd, sfd non-global?
+// TODO: update w3 URLs?
+// TODO: ditch octet?
+// TODO: fix HTTP/1.1 413 Request Entity Too Large, via telnet
 
 // feature test macro requirements
 #define _GNU_SOURCE
@@ -41,19 +45,21 @@ typedef char octet;
 
 // prototypes
 bool connected(void);
-bool error(unsigned short code);
+void error(unsigned short code);
 void freedir(struct dirent** namelist, int n);
 void handler(int signal);
 char* htmlspecialchars(const char* s);
+void interpret(const char* path, const char* query);
 bool load(FILE* file, octet** content, ssize_t* length);
 const char* lookup(const char* extension);
-octet* parse(void);
+bool parse(const char* request, char* path, char* query);
 const char* reason(unsigned short code);
-bool redirect(const char* uri);
-bool respond(int code, const char* headers, const char* body, int length);
-bool list(const char* path);
+void redirect(const char* uri);
+void respond(int code, const char* headers, const char* body, int length);
+void list(const char* path);
 void start(short port, const char* path);
 void stop(void);
+void transfer(const char* path);
 
 // server's root
 char* root = NULL;
@@ -71,8 +77,8 @@ int main(int argc, char* argv[])
     // in the event of an error to indicate what went wrong"
     errno = 0;
 
-    // default to port 80
-    int port = 80;
+    // default to port 8080
+    int port = 8080;
 
     // usage
     const char* usage = "Usage: server [-p port] /path/to/root";
@@ -111,19 +117,9 @@ int main(int argc, char* argv[])
     // listen for SIGINT (aka control-c)
     signal(SIGINT, handler);
 
-    // a client's request
-    octet* request = NULL;
-
     // accept connections one at a time
     while (true)
     {
-        // free last request, if any
-        if (request != NULL)
-        {
-            free(request);
-            request = NULL;
-        }
-
         // close last client's socket, if any
         if (cfd != -1)
         {
@@ -140,271 +136,98 @@ int main(int argc, char* argv[])
         // check whether client has connected
         if (connected())
         {
-            // parse client's HTTP request
-            request = parse();
-            if (request == NULL)
+            // read HTTP request's headers
+            octet headers[LimitRequestLine + LimitRequestFields * LimitRequestFieldSize + 4 + 1];
+            ssize_t length = read(cfd, headers, sizeof(headers) - 1);
+            if (length == -1)
             {
+                error(500);
                 continue;
             }
+            *(headers + length) = '\0';
 
-            // extract request's request-line
-            // http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
-            const char* haystack = request;
-            char* needle = strstr(haystack, "\r\n");
+            // search for CRLF CRLF, per http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html#sec5
+            const char* haystack = headers;
+            char* needle = strstr(haystack, "\r\n\r\n");
             if (needle == NULL)
             {
-                error(400);
-                continue;
-            }
-            else if (needle - haystack + 2 > LimitRequestLine)
-            {
-                error(414);
-                continue;
-            }   
-            char line[needle - haystack + 2 + 1];
-            strncpy(line, haystack, needle - haystack + 2);
-            line[needle - haystack + 2] = '\0';
-
-            // log request-line
-            printf("%s", line);
-
-            // find first SP in request-line
-            haystack = line;
-            needle = strchr(haystack, ' ');
-            if (needle == NULL)
-            {
-                error(400);
+                error(413);
                 continue;
             }
 
-            // extract method
-            char method[needle - haystack + 1];
-            strncpy(method, haystack, needle - haystack);
-            method[needle - haystack] = '\0';
+            // trim trailing CRLF
+            *(needle + 2) = '\0';
 
-            // find second SP in request-line
-            haystack = needle + 1;
-            needle = strchr(haystack, ' ');
-            if (needle == NULL)
+            // log headers
+            printf("%s", headers);
+
+            // parse headers
+            char abs_path[LimitRequestLine + 1];
+            char query[LimitRequestLine + 1];
+            if (parse(headers, abs_path, query) == true)
             {
-                error(400);
-                continue;
-            }
+                // determine file's full path
+                char path[strlen(root) + strlen(abs_path) + 1];
+                strcpy(path, root);
+                strcat(path, abs_path);
 
-            // extract request-target
-            char target[needle - haystack + 1];
-            strncpy(target, haystack, needle - haystack);
-            target[needle - haystack] = '\0';
-
-            // find first CRLF in request-line
-            haystack = needle + 1;
-            needle = strstr(haystack, "\r\n");
-            if (needle == NULL)
-            {
-                error(414);
-                continue;
-            }
-
-            // extract HTTP-version
-            char version[needle - haystack + 1];
-            strncpy(version, haystack, needle - haystack);
-            version[needle - haystack] = '\0';
-
-            // ensure request's method is GET
-            if (strcmp("GET", method) != 0)
-            {
-                error(405);
-                continue;
-            }
-
-            // ensure request-target starts with absolute-path
-            if (target[0] != '/')
-            {
-                error(501);
-                continue;
-            }
-
-            // ensure request-target is safe
-            // http://www.rfc-editor.org/rfc/rfc3986.txt
-            if (strchr(target, '"') != NULL)
-            {
-                error(400);
-                continue;
-            }
-
-            // ensure HTTP-version is HTTP/1.1
-            if (strcmp("HTTP/1.1", version) != 0)
-            {
-                error(505);
-                continue;
-            }
-
-            // find end of absolute-path in request-target
-            haystack = target;
-            needle = strchr(haystack, '?');
-            if (needle == NULL)
-            {
-                needle = target + strlen(target);
-            }
-
-            // extract absolute-path 
-            char abs_path[needle - haystack + 1];
-            strncpy(abs_path, target, needle - haystack);
-            abs_path[needle - haystack] = '\0';
-
-            // find start of query in request-target
-            if (*needle == '?')
-            {
-                needle = needle + 1;
-            }
-
-            // extract query
-            char query[strlen(needle) + 1];
-            strcpy(query, needle);
-
-            // determine file's full path
-            char path[strlen(root) + strlen(abs_path) + 1];
-            strcpy(path, root);
-            strcat(path, abs_path);
-
-            // ensure file exists
-            if (access(path, F_OK) == -1)
-            {
-                error(404);
-                continue;
-            }
-
-            // ensure file is readable
-            if (access(path, R_OK) == -1)
-            {
-                error(403);
-                continue;
-            }
-
-            // a path to directory
-            struct stat sb;
-            if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
-            {
-                // redirect from absolute-path to absolute-path/
-                if (abs_path[strlen(abs_path) - 1] != '/')
+                // ensure file exists
+                if (access(path, F_OK) == -1)
                 {
-                    char uri[strlen(abs_path) + 1 + 1];
-                    strcpy(uri, abs_path);
-                    strcat(uri, "/");
-                    redirect(uri);
+                    error(404);
                     continue;
                 }
 
-                // list directory entries
-                list(path);
-            }
-
-            // a path to file
-            else
-            {
-                // extract file's extension
-                haystack = path;
-                needle = strrchr(haystack, '.');
-                if (needle == NULL)
+                // ensure file is readable
+                if (access(path, R_OK) == -1)
                 {
-                    error(501);
+                    error(403);
                     continue;
                 }
-                char extension[strlen(needle + 1) + 1];
-                strcpy(extension, needle + 1);
 
-                // dynamic content
-                if (strcasecmp("php", extension) == 0)
+                // path is to directory
+                struct stat sb;
+                if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))
                 {
-                    // open pipe to PHP interpreter
-                    char* format = "QUERY_STRING=\"%s\" REDIRECT_STATUS=200 SCRIPT_FILENAME=\"%s\" php-cgi";
-                    char command[strlen(format) + (strlen(path) - 2) + (strlen(query) - 2) + 1];
-                    if (sprintf(command, format, query, path) < 0)
+                    // redirect from absolute-path to absolute-path/
+                    if (abs_path[strlen(abs_path) - 1] != '/')
                     {
-                        error(500);
-                        continue;
-                    }
-                    FILE* file = popen(command, "r");
-                    if (file == NULL)
-                    {
-                        error(500);
+                        char uri[strlen(abs_path) + 1 + 1];
+                        strcpy(uri, abs_path);
+                        strcat(uri, "/");
+                        redirect(uri);
                         continue;
                     }
 
-                    // load interpreter's content
-                    octet* content;
-                    ssize_t length;
-                    if (load(file, &content, &length) == false)
-                    {
-                        error(500);
-                        continue;
-                    }
-
-                    // close pipe
-                    pclose(file);
-
-                    // subtract php-cgi's headers from content's length to get body's length
-                    octet* haystack = content;
-                    octet* needle = memmem(haystack, length, "\r\n\r\n", 4);
-                    if (needle == NULL)
-                    {
-                        error(500);
-                        continue;
-                    }
-
-                    // extract headers
-                    char headers[needle - haystack + 1];
-                    strncpy(headers, content, needle - haystack);
-                    headers[needle - haystack] = '\0';
-
-                    // respond with interpreter's content
-                    respond(200, headers, needle + 4, length - (needle - haystack + 4));
-                    free(content);
+                    // list directory entries
+                    list(path);
                 }
 
-                // static content
+                // path is to file
                 else
                 {
-                    // look up file's MIME type
-                    const char* type = lookup(extension);
-                    if (type == NULL)
+                    // extract file's extension
+                    haystack = path;
+                    needle = strrchr(haystack, '.');
+                    if (needle == NULL)
                     {
                         error(501);
                         continue;
                     }
+                    char extension[strlen(needle + 1) + 1];
+                    strcpy(extension, needle + 1);
 
-                    // open file
-                    FILE* file = fopen(path, "r");
-                    if (file == NULL)
+                    // interpret PHP script at path
+                    if (strcasecmp("php", extension) == 0)
                     {
-                        error(500);
-                        continue;
+                        interpret(path, query);
                     }
 
-                    // load file's content
-                    octet* content;
-                    ssize_t length;
-                    if (load(file, &content, &length) == false)
+                    // transfer file at path
+                    else
                     {
-                        error(500);
-                        continue;
+                        transfer(path);
                     }
-
-                    // close file
-                    fclose(file);
-
-                    // prepare response
-                    char* template = "Content-Type: %s\r\n";
-                    char headers[strlen(template) - 2 + strlen(type) + 1];
-                    if (sprintf(headers, template, type) < 0)
-                    {
-                        error(500);
-                        continue;
-                    }
-
-                    // respond with file's content
-                    respond(200, headers, content, length);
-                    free(content);
                 }
             }
         }
@@ -446,13 +269,13 @@ bool connected(void)
 /**
  * Responds to client with specified status code.
  */
-bool error(unsigned short code)
+void error(unsigned short code)
 {
     // determine code's reason-phrase
     const char* phrase = reason(code);
     if (phrase == NULL)
     {
-        return false;
+        return;
     }
 
     // template for response's content
@@ -463,13 +286,13 @@ bool error(unsigned short code)
     int length = sprintf(body, template, code, phrase, code, phrase);
     if (length < 0)
     {
-        error(500);
-        return false;
+        // TODO: 500
+        return;
     }
 
     // respond with error
     char* headers = "Content-Type: html\r\n";
-    return respond(code, headers, body, length);
+    respond(code, headers, body, length);
 }
 
 /**
@@ -593,21 +416,74 @@ char* htmlspecialchars(const char* s)
 }
 
 /**
+ * Interprets PHP file at path using query string.
+ */
+void interpret(const char* path, const char* query)
+{
+    // open pipe to PHP interpreter
+    char* format = "QUERY_STRING=\"%s\" REDIRECT_STATUS=200 SCRIPT_FILENAME=\"%s\" php-cgi";
+    char command[strlen(format) + (strlen(path) - 2) + (strlen(query) - 2) + 1];
+    if (sprintf(command, format, query, path) < 0)
+    {
+        error(500);
+        return;
+    }
+    FILE* file = popen(command, "r");
+    if (file == NULL)
+    {
+        error(500);
+        return;
+    }
+
+    // load interpreter's content
+    octet* content;
+    ssize_t length;
+    if (load(file, &content, &length) == false)
+    {
+        error(500);
+        return;
+    }
+
+    // close pipe
+    pclose(file);
+
+    // subtract php-cgi's headers from content's length to get body's length
+    octet* haystack = content;
+    octet* needle = memmem(haystack, length, "\r\n\r\n", 4);
+    if (needle == NULL)
+    {
+        error(500);
+        return;
+    }
+
+    // extract headers
+    char headers[needle - haystack + 1];
+    strncpy(headers, content, needle - haystack);
+    headers[needle - haystack] = '\0';
+
+    // respond with interpreter's content
+    respond(200, headers, needle + 4, length - (needle - haystack + 4));
+
+    // free interpreter's content
+    free(content);
+}
+
+/**
  * Lists contents of directory at path.
  */
-bool list(const char* path)
+void list(const char* path)
 {
     // ensure path is within root
     if (strstr(path, root) == NULL)
     {
-        return false;
+        return;
     }
 
     // open directory
     DIR* dir = opendir(path);
     if (dir == NULL)
     {
-        return false;
+        return;
     }
 
     // buffer for list items
@@ -632,7 +508,7 @@ bool list(const char* path)
             free(list);
             freedir(namelist, n);
             error(500);
-            return false;
+            return;
         }
 
         // append list item to buffer
@@ -643,7 +519,7 @@ bool list(const char* path)
             free(name);
             freedir(namelist, n);
             error(500);
-            return false;
+            return;
         }
         if (sprintf(list + strlen(list), template, name, name) < 0)
         {
@@ -651,7 +527,7 @@ bool list(const char* path)
             freedir(namelist, n);
             free(list);
             error(500);
-            return false;
+            return;
         }
 
         // free escaped name
@@ -671,7 +547,7 @@ bool list(const char* path)
         free(list);
         closedir(dir);
         error(500);
-        return false;
+        return;
     }
 
     // free buffer
@@ -682,7 +558,7 @@ bool list(const char* path)
 
     // respond with list
     char* headers = "Content-Type: html\r\n";
-    return respond(200, headers, body, length);
+    respond(200, headers, body, length);
 }
 
 /**
@@ -797,78 +673,122 @@ const char* lookup(const char* extension)
 }
 
 /**
- * Parses an HTTP request.
+ *
  */
-octet* parse(void)
+bool parse(const char* request, char* abs_path, char* query)
 {
-    // ensure client's socket is open
-    if (cfd == -1)
+    // extract request's request-line
+    // http://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
+    const char* haystack = request;
+    const char* needle = strstr(haystack, "\r\n");
+    if (needle == NULL)
     {
-        return NULL;
+        error(400);
+        return false;
+    }
+    else if (needle - haystack + 2 > LimitRequestLine)
+    {
+        error(414);
+        return false;
+    }   
+    char line[needle - haystack + 2 + 1];
+    strncpy(line, haystack, needle - haystack + 2);
+    line[needle - haystack + 2] = '\0';
+
+    // find first SP in request-line
+    haystack = line;
+    needle = strchr(haystack, ' ');
+    if (needle == NULL)
+    {
+        error(400);
+        return false;
     }
 
-    // buffer for octets
-    octet buffer[OCTETS];
+    // extract method
+    char method[needle - haystack + 1];
+    strncpy(method, haystack, needle - haystack);
+    method[needle - haystack] = '\0';
 
-    // parse request
-    octet *request = NULL;
-    ssize_t length = 0;
-    while (true)
+    // find second SP in request-line
+    haystack = needle + 1;
+    needle = strchr(haystack, ' ');
+    if (needle == NULL)
     {
-        // read from socket
-        ssize_t octets = read(cfd, buffer, sizeof(octet) * OCTETS);
-        if (octets == -1)
-        {
-            // 500
-            return NULL;
-        }
-
-        // if octets have been read, remember new length
-        if (octets > 0)
-        {
-            request = realloc(request, length + octets);
-            if (request == NULL)
-            {
-                // 500
-                return NULL;
-            }
-            memcpy(request + length, buffer, octets);
-            length += octets;
-        }
-
-        // else if nothing's been read, socket's been closed
-        else
-        {
-            return NULL;
-        }
-
-        // search for CRLF CRLF
-        int offset = (length - octets < 3) ? length - octets : 3;
-        char* haystack = request + length - octets - offset;
-        char* needle = memmem(haystack, request + length - haystack, "\r\n\r\n", 4);
-        if (needle != NULL)
-        {
-            // trim to one CRLF and null-terminate
-            length = needle - request + 2 + 1;
-            request = realloc(request, length);
-            if (request == NULL)
-            {
-                // 500
-                return NULL;
-            }
-            request[length - 1] = '\0';
-            break;
-        }
-
-        // if buffer's full and we still haven't found CRLF CRLF,
-        // then request is too large
-        if (length - 1 >= LimitRequestLine + LimitRequestFields * LimitRequestFieldSize)
-        {
-            // TODO: 413
-            return NULL;
-        }
+        error(400);
+        return false;
     }
-    return request;
+
+    // extract request-target
+    char target[needle - haystack + 1];
+    strncpy(target, haystack, needle - haystack);
+    target[needle - haystack] = '\0';
+
+    // find first CRLF in request-line
+    haystack = needle + 1;
+    needle = strstr(haystack, "\r\n");
+    if (needle == NULL)
+    {
+        error(414);
+        return false;
+    }
+
+    // extract HTTP-version
+    char version[needle - haystack + 1];
+    strncpy(version, haystack, needle - haystack);
+    version[needle - haystack] = '\0';
+
+    // ensure request's method is GET
+    if (strcmp("GET", method) != 0)
+    {
+        error(405);
+        return false;
+    }
+
+    // ensure request-target starts with absolute-path
+    if (target[0] != '/')
+    {
+        error(501);
+        return false;
+    }
+
+    // ensure request-target is safe
+    // http://www.rfc-editor.org/rfc/rfc3986.txt
+    if (strchr(target, '"') != NULL)
+    {
+        error(400);
+        return false;
+    }
+
+    // ensure HTTP-version is HTTP/1.1
+    if (strcmp("HTTP/1.1", version) != 0)
+    {
+        error(505);
+        return false;
+    }
+
+    // find end of absolute-path in request-target
+    haystack = target;
+    needle = strchr(haystack, '?');
+    if (needle == NULL)
+    {
+        needle = target + strlen(target);
+    }
+
+    // extract absolute-path 
+    strncpy(abs_path, target, needle - haystack);
+    abs_path[needle - haystack] = '\0';
+
+    // find start of query in request-target
+    if (*needle == '?')
+    {
+        needle = needle + 1;
+    }
+
+    // extract query
+    strcpy(query, needle);
+
+    // parsed
+    return true;
 }
 
 /**
@@ -903,56 +823,56 @@ const char* reason(unsigned short code)
 /**
  * Redirects client to uri.
  */
-bool redirect(const char* uri)
+void redirect(const char* uri)
 {
     char* template = "Location: %s\r\n";
     char headers[strlen(template) - 2 + strlen(uri) + 1];
     if (sprintf(headers, template, uri) < 0)
     {
         error(500);
-        return false;
+        return;
     }
-    return respond(301, headers, NULL, 0);
+    respond(301, headers, NULL, 0);
 }
 
 /**
  * Responds to a client with status code, headers, and body of specified length.
  */
-bool respond(int code, const char* headers, const char* body, int length)
+void respond(int code, const char* headers, const char* body, int length)
 {
     // determine Status-Line's phrase
     // http://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html#sec6.1
     const char* phrase = reason(code);
     if (phrase == NULL)
     {
-        return false;
+        return;
     }
 
     // respond with Status-Line
     if (dprintf(cfd, "HTTP/1.1 %i %s\r\n", code, phrase) < 0)
     {
-        return false;
+        return;
     }
 
     // respond with headers
     if (dprintf(cfd, "%s", headers) < 0)
     {
-        return false;
+        return;
     }
 
     // respond with CRLF
     if (dprintf(cfd, "\r\n") < 0)
     {
-        return false;
+        return;
     }
 
     // respond with body
     if (write(cfd, body, length) == -1)
     {
-        return false;
+        return;
     }
 
-    // log response
+    // log response line
     if (code == 200)
     {
         // green
@@ -965,9 +885,6 @@ bool respond(int code, const char* headers, const char* body, int length)
     }
     printf("HTTP/1.1 %i %s", code, phrase);
     printf("\033[39m\n");
-
-    // responded
-    return true;
 }
 
 /**
@@ -1066,4 +983,61 @@ void stop(void)
 
     // stop server
     exit(errsv);
+}
+
+/**
+ * Transfers file at path to client.
+ */
+void transfer(const char* path)
+{
+    // file's extension
+    const char* extension = strrchr(path, '.');
+    if (extension == NULL)
+    {
+        error(501);
+        return;
+    }
+
+    // file's MIME type
+    const char* type = lookup(extension + 1);
+    if (type == NULL)
+    {
+        error(501);
+        return;
+    }
+
+    // open file
+    FILE* file = fopen(path, "r");
+    if (file == NULL)
+    {
+        error(500);
+        return;
+    }
+
+    // load file's content
+    octet* content;
+    ssize_t length;
+    if (load(file, &content, &length) == false)
+    {
+        error(500);
+        return;
+    }
+
+    // close file
+    fclose(file);
+
+    // prepare response
+    char* template = "Content-Type: %s\r\n";
+    char headers[strlen(template) - 2 + strlen(type) + 1];
+    if (sprintf(headers, template, type) < 0)
+    {
+        error(500);
+        return;
+    }
+
+    // respond with file's content
+    respond(200, headers, content, length);
+
+    // free file's content
+    free(content);
 }
