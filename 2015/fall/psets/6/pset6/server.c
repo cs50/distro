@@ -41,14 +41,14 @@ typedef char octet;
 
 // prototypes
 bool connected(void);
-bool error(unsigned short code, const char* message);
+bool error(unsigned short code);
 void freedir(struct dirent** namelist, int n);
 void handler(int signal);
 char* htmlspecialchars(const char* s);
 bool load(FILE* file, octet** content, ssize_t* length);
 const char* lookup(const char* extension);
 octet* parse(void);
-const char* reason(int code);
+const char* reason(unsigned short code);
 bool redirect(const char* uri);
 bool respond(int code, const char* headers, const char* body, int length);
 bool list(const char* path);
@@ -111,18 +111,12 @@ int main(int argc, char* argv[])
     // listen for SIGINT (aka control-c)
     signal(SIGINT, handler);
 
-    // TODO: comment
+    // a client's request
     octet* request = NULL;
 
     // accept connections one at a time
     while (true)
     {
-        // check for control-c
-        if (signaled == true)
-        {
-            stop();
-        }
-
         // free last request, if any
         if (request != NULL)
         {
@@ -135,6 +129,12 @@ int main(int argc, char* argv[])
         {
             close(cfd);
             cfd = -1;
+        }
+
+        // check for control-c
+        if (signaled == true)
+        {
+            stop();
         }
 
         // check whether client has connected
@@ -153,12 +153,12 @@ int main(int argc, char* argv[])
             char* needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
-                error(400, "TODO");
+                error(400);
                 continue;
             }
             else if (needle - haystack + 2 > LimitRequestLine)
             {
-                error(414, "TODO");
+                error(414);
                 continue;
             }   
             char line[needle - haystack + 2 + 1];
@@ -173,7 +173,7 @@ int main(int argc, char* argv[])
             needle = strchr(haystack, ' ');
             if (needle == NULL)
             {
-                error(400, "TODO");
+                error(400);
                 continue;
             }
 
@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
             needle = strchr(haystack, ' ');
             if (needle == NULL)
             {
-                error(400, "TODO");
+                error(400);
                 continue;
             }
 
@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
             needle = strstr(haystack, "\r\n");
             if (needle == NULL)
             {
-                error(414, "TODO");
+                error(414);
                 continue;
             }
 
@@ -213,14 +213,14 @@ int main(int argc, char* argv[])
             // ensure request's method is GET
             if (strcmp("GET", method) != 0)
             {
-                error(405, "TODO");
+                error(405);
                 continue;
             }
 
             // ensure request-target starts with absolute-path
             if (target[0] != '/')
             {
-                error(501, "TODO");
+                error(501);
                 continue;
             }
 
@@ -228,14 +228,14 @@ int main(int argc, char* argv[])
             // http://www.rfc-editor.org/rfc/rfc3986.txt
             if (strchr(target, '"') != NULL)
             {
-                error(400, "TODO");
+                error(400);
                 continue;
             }
 
             // ensure HTTP-version is HTTP/1.1
             if (strcmp("HTTP/1.1", version) != 0)
             {
-                error(505, "TODO");
+                error(505);
                 continue;
             }
 
@@ -270,14 +270,14 @@ int main(int argc, char* argv[])
             // ensure file exists
             if (access(path, F_OK) == -1)
             {
-                error(404, "TODO");
+                error(404);
                 continue;
             }
 
             // ensure file is readable
             if (access(path, R_OK) == -1)
             {
-                error(403, "TODO");
+                error(403);
                 continue;
             }
 
@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
                 needle = strrchr(haystack, '.');
                 if (needle == NULL)
                 {
-                    error(501, "TODO");
+                    error(501);
                     continue;
                 }
                 char extension[strlen(needle + 1) + 1];
@@ -321,13 +321,13 @@ int main(int argc, char* argv[])
                     char command[strlen(format) + (strlen(path) - 2) + (strlen(query) - 2) + 1];
                     if (sprintf(command, format, query, path) < 0)
                     {
-                        error(500, "TODO");
+                        error(500);
                         continue;
                     }
                     FILE* file = popen(command, "r");
                     if (file == NULL)
                     {
-                        error(500, "TODO");
+                        error(500);
                         continue;
                     }
 
@@ -336,16 +336,19 @@ int main(int argc, char* argv[])
                     ssize_t length;
                     if (load(file, &content, &length) == false)
                     {
-                        error(500, "TODO");
+                        error(500);
                         continue;
                     }
+
+                    // close pipe
+                    pclose(file);
 
                     // subtract php-cgi's headers from content's length to get body's length
                     octet* haystack = content;
                     octet* needle = memmem(haystack, length, "\r\n\r\n", 4);
                     if (needle == NULL)
                     {
-                        error(500, "TODO");
+                        error(500);
                         continue;
                     }
 
@@ -366,7 +369,7 @@ int main(int argc, char* argv[])
                     const char* type = lookup(extension);
                     if (type == NULL)
                     {
-                        error(501, "TODO");
+                        error(501);
                         continue;
                     }
 
@@ -374,7 +377,7 @@ int main(int argc, char* argv[])
                     FILE* file = fopen(path, "r");
                     if (file == NULL)
                     {
-                        error(500, "TODO");
+                        error(500);
                         continue;
                     }
 
@@ -383,16 +386,19 @@ int main(int argc, char* argv[])
                     ssize_t length;
                     if (load(file, &content, &length) == false)
                     {
-                        error(500, "TODO");
+                        error(500);
                         continue;
                     }
+
+                    // close file
+                    fclose(file);
 
                     // prepare response
                     char* template = "Content-Type: %s\r\n";
                     char headers[strlen(template) - 2 + strlen(type) + 1];
                     if (sprintf(headers, template, type) < 0)
                     {
-                        error(500, "TODO");
+                        error(500);
                         continue;
                     }
 
@@ -438,9 +444,9 @@ bool connected(void)
 }
 
 /**
- *
+ * Responds to client with specified status code.
  */
-bool error(unsigned short code, const char* message)
+bool error(unsigned short code)
 {
     // determine code's reason-phrase
     const char* phrase = reason(code);
@@ -450,21 +456,16 @@ bool error(unsigned short code, const char* message)
     }
 
     // template for response's content
-    char* template = "<html><head><title>%i %s</title></head><body><h1>%i %s</h1><h2>%s</h2></body></html>";
+    char* template = "<html><head><title>%i %s</title></head><body><h1>%i %s</h1></body></html>";
 
     // render template
-    char body[(strlen(template) - 2 - ((int) log10(code) + 1) - 2 + strlen(phrase)) * 2 - 2 + strlen(message) + 1];
-    int length = sprintf(body, template, code, phrase, code, phrase, message);
+    char body[(strlen(template) - 2 - ((int) log10(code) + 1) - 2 + strlen(phrase)) * 2 + 1];
+    int length = sprintf(body, template, code, phrase, code, phrase);
     if (length < 0)
     {
-        error(500, "TODO");
+        error(500);
         return false;
     }
-
-    // announce error
-    printf("\033[33m");
-    printf("%s", message);
-    printf("\033[39m\n");
 
     // respond with error
     char* headers = "Content-Type: html\r\n";
@@ -472,11 +473,12 @@ bool error(unsigned short code, const char* message)
 }
 
 /**
+ * Returns status code's reason phrase.
  *
  * http://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html#sec6
  * https://tools.ietf.org/html/rfc2324
  */
-const char* reason(int code)
+const char* reason(unsigned short code)
 {
     switch (code)
     {
@@ -523,11 +525,6 @@ void handler(int signal)
     // control-c
     if (signal == SIGINT)
     {
-        // ensure this isn't considered an error
-        // (as might otherwise happen after a recent 404)
-        /* TODO: decide if needed
-        errno = 0;
-        */
         signaled = true;
     }
 }
@@ -571,7 +568,7 @@ bool list(const char* path)
         {
             free(list);
             freedir(namelist, n);
-            error(500, "TODO");
+            error(500);
             return false;
         }
 
@@ -582,7 +579,7 @@ bool list(const char* path)
         {
             free(name);
             freedir(namelist, n);
-            error(500, "unable to resize buffer");
+            error(500);
             return false;
         }
         if (sprintf(list + strlen(list), template, name, name) < 0)
@@ -590,7 +587,7 @@ bool list(const char* path)
             free(name);
             freedir(namelist, n);
             free(list);
-            error(500, "unable to append list item to buffer");
+            error(500);
             return false;
         }
 
@@ -610,7 +607,7 @@ bool list(const char* path)
     {
         free(list);
         closedir(dir);
-        error(500, "TODO");
+        error(500);
         return false;
     }
 
@@ -897,7 +894,7 @@ octet* parse(void)
         // then request is too large
         if (length - 1 >= LimitRequestLine + LimitRequestFields * LimitRequestFieldSize)
         {
-            //error(413, "TODO");
+            // TODO: 413
             return NULL;
         }
     }
@@ -913,7 +910,7 @@ bool redirect(const char* uri)
     char headers[strlen(template) - 2 + strlen(uri) + 1];
     if (sprintf(headers, template, uri) < 0)
     {
-        error(500, "TODO");
+        error(500);
         return false;
     }
     return respond(301, headers, NULL, 0);
