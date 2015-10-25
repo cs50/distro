@@ -261,10 +261,6 @@ int main(int argc, char* argv[])
                         transfer(path, type);
                     }
                 }
-                else
-                {
-                    error(501);
-                }
             }
         }
     }
