@@ -312,7 +312,7 @@ void error(unsigned short code)
     }
 
     // respond with error
-    char* headers = "Content-Type: html\r\n";
+    char* headers = "Content-Type: text/html\r\n";
     respond(code, headers, body, length);
 }
 
@@ -648,7 +648,7 @@ void list(const char* path)
     closedir(dir);
 
     // respond with list
-    char* headers = "Content-Type: html\r\n";
+    char* headers = "Content-Type: text/html\r\n";
     respond(200, headers, body, length);
 }
 
