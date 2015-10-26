@@ -716,15 +716,14 @@ const char* lookup(const char* path)
         return NULL;
     }
 
-    // extract path's extension
+    // find path's extension
     const char* haystack = path;
     const char* needle = strrchr(haystack, '.');
     if (needle == NULL)
     {
         return NULL;
     }
-    char extension[strlen(needle + 1) + 1];
-    strcpy(extension, needle + 1);
+    const char* extension = needle + 1;
 
     // .css
     if (strcasecmp("css", extension) == 0)
