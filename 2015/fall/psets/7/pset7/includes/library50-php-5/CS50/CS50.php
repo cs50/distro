@@ -44,11 +44,17 @@
 
     // require extensions for Janrain's libary
     if (!extension_loaded("bcmath") && !extension_loaded("gmp"))
-    	trigger_error("CS50 Library requires bcmath or gmp extension module", E_USER_ERROR);
+    {
+        trigger_error("CS50 Library requires bcmath or gmp extension module", E_USER_ERROR);
+    }
     if (!extension_loaded("dom") && !extension_loaded("domxml"))
-    	trigger_error("CS50 Library requires dom or domxml extension module", E_USER_ERROR);
+    {
+        trigger_error("CS50 Library requires dom or domxml extension module", E_USER_ERROR);
+    }
     if (!extension_loaded("openssl"))
-    	trigger_error("CS50 Library requires openssl extension module", E_USER_ERROR);
+    {
+        trigger_error("CS50 Library requires openssl extension module", E_USER_ERROR);
+    }
 
     // ensure Janrain's library doesn't fail on Windows
     if (strtoupper(substr(PHP_OS, 0, 3)) === "WIN")
@@ -64,16 +70,16 @@
     class CS50
     {
         /**
-         *
+         * Library's configuration.
          */
         private static $config;
 
         /**
-         *
+         * Initializes library with JSON file at $path.
          */
         public static function init($path)
         {
-            //
+            // ensure library is not already initialized
             if (isset(self::$config))
             {
                 trigger_error("CS50 Library is already initialized", E_USER_ERROR);
@@ -82,21 +88,21 @@
             // ensure configuration file exists
             if (!is_file($path))
             {
-                trigger_error("Could not find $path", E_USER_ERROR);
+                trigger_error("Could not find {$path}", E_USER_ERROR);
             }
 
             // read contents of configuration file
             $contents = file_get_contents($path);
             if ($contents === false)
             {
-                trigger_error("Could not read $path", E_USER_ERROR);
+                trigger_error("Could not read {$path}", E_USER_ERROR);
             }
 
             // decode contents of configuration file
             $config = json_decode($contents, true);
             if (is_null($config))
             {
-                trigger_error("Could not decode $path", E_USER_ERROR);
+                trigger_error("Could not decode {$path}", E_USER_ERROR);
             }
 
             // store configuration
@@ -104,7 +110,7 @@
         }
 
         /**
-         *
+         * Pretty-prints argument(s) to browser to facilitate debugging.
          */
         public static function dump(/* args */)
         {
@@ -112,7 +118,7 @@
             print("<html><head><title>dump</title></head><body><pre>");
             foreach (func_get_args() as $arg)
             {
-                var_dump($arg);
+                print(var_export($arg));
             }
             print("</pre></body></html>");
             exit;
@@ -131,12 +137,6 @@
          */
         public static function getLoginUrl($trust_root, $return_to, $fields = ["email", "fullname"], $attributes = [])
         {
-            // TODO: comment, add check for config vars
-            if (isset(self::$config))
-            {
-                trigger_error("CS50 Library is not initialized", E_USER_ERROR);
-            }
-
             // ignore Janrain's use of deprecated functions
             $error_reporting = error_reporting();
             error_reporting($error_reporting & ~E_DEPRECATED);
@@ -155,11 +155,17 @@
             $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . md5($return_to);
             @mkdir($path, 0700);
             if (!is_dir($path))
-                trigger_error("Could not create $path", E_USER_ERROR);
+            {
+                trigger_error("Could not create {$path}", E_USER_ERROR);
+            }
             if (!is_readable($path))
-                trigger_error("Could not read from $path", E_USER_ERROR);
+            {
+                trigger_error("Could not read from {$path}", E_USER_ERROR);
+            }
             if (!is_writable($path))
-                trigger_error("Could not write to $path", E_USER_ERROR);
+            {
+                trigger_error("Could not write to {$path}", E_USER_ERROR);
+            }
             $store = new Auth_OpenID_FileStore($path);
 
             // prepare request
@@ -178,7 +184,9 @@
             {
                 $ax_request = new Auth_OpenID_AX_FetchRequest();
                 foreach ($attributes as $attribute)
+                {
                     $ax_request->add(Auth_OpenID_AX_AttrInfo::make($attribute, 1, false));
+                }
                 $auth_request->addExtension($ax_request);
             }
 
@@ -195,7 +203,9 @@
                 return false;
             }
             else
+            {
                 return $redirect_url;
+            }
         }
  
         /**
@@ -209,12 +219,6 @@
          */
         public static function getUser($return_to)
         {
-            // TODO: comment, add check for config vars
-            if (isset(self::$config))
-            {
-                trigger_error("CS50 Library is not initialized", E_USER_ERROR);
-            }
-
             // ignore Janrain's use of deprecated functions
             $error_reporting = error_reporting();
             error_reporting($error_reporting & ~E_DEPRECATED);
@@ -233,11 +237,17 @@
             $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . md5($return_to);
             @mkdir($path, 0700);
             if (!is_dir($path))
+            {
                 trigger_error("Could not create $path", E_USER_ERROR);
+            }
             if (!is_readable($path))
+            {
                 trigger_error("Could not read from $path", E_USER_ERROR);
+            }
             if (!is_writable($path))
+            {
                 trigger_error("Could not write to $path", E_USER_ERROR);
+            }
             $store = new Auth_OpenID_FileStore($path);
 
             // get response
@@ -250,11 +260,15 @@
 
                 // get Simple Registration fields, if any
                 if ($sreg_resp = Auth_OpenID_SRegResponse::fromSuccessResponse($response))
+                {
                     $user = array_merge($user, $sreg_resp->contents());
+                }
 
                 // get Attribute Exchange attributes, if any
                 if ($ax_resp = Auth_OpenID_AX_FetchResponse::fromSuccessResponse($response))
+                {
                     $user = array_merge($user, $ax_resp->data);
+                }
             }
 
             // restore error_reporting
@@ -270,22 +284,37 @@
          */
         public static function query(/* $sql [, ... ] */)
         {
+            // ensure library is initialized
+            if (isset(self::$config))
+            {
+                trigger_error("CS50 Library is not initialized", E_USER_ERROR);
+            }
+
+            // ensure database is configured
             if (!isset(self::$config["database"]))
             {
                 trigger_error("Missing value for database", E_USER_ERROR);
             }
+
+            // ensure database.name is configured
             if (!isset(self::$config["database"]["name"]))
             {
                 trigger_error("Missing value for database.name", E_USER_ERROR);
             }
+
+            // ensure database.password is configured
             if (!isset(self::$config["database"]["password"]))
             {
                 trigger_error("Missing value for database.password", E_USER_ERROR);
             }
+
+            // ensure database.server is configured
             if (!isset(self::$config["database"]["server"]))
             {
                 trigger_error("Missing value for database.server", E_USER_ERROR);
             }
+
+            // ensure database.username is configured
             if (!isset(self::$config["database"]["username"]))
             {
                 trigger_error("Missing value for database.username", E_USER_ERROR);
@@ -329,6 +358,7 @@
             $replacement = [];
             for ($i = 0; $i < $placeholders; $i++)
             {
+                // TODO: make sure it's not prefixed with \
                 array_push($pattern, "/[?]/");
                 array_push($replacement, $handle->quote($parameters[$i]));
             }
@@ -372,14 +402,27 @@
             {
                 trigger_error("HTTP headers already sent at {$file}:{$line}", E_USER_ERROR);
             }
+            header("Location: {$location}");
             exit;
         }
 
         /**
-         * Renders template, passing in values.
+         * Renders view, passing in values.
          */
-        public static function render($template, $values = [])
+        public static function render($view, $values = [])
         {
+            // ensure views is configured
+            if (!isset(self::$config["views"]))
+            {
+                trigger_error("Missing value for views", E_USER_ERROR);
+            }
+
+            // ensure library is initialized
+            if (isset(self::$config))
+            {
+                trigger_error("CS50 Library is not initialized", E_USER_ERROR);
+            }
+
             // if template exists, render it
             if (file_exists("../templates/$template"))
             {
