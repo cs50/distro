@@ -8,7 +8,7 @@
         </div>
         <div class="form-group">
             <button class="btn btn-default" type="submit">
-                <span class="glyphicon glyphicon-log-in" aria-hidden="true"></span>
+                <span aria-hidden="true" class="glyphicon glyphicon-log-in"></span>
                 Log In
             </button>
         </div>

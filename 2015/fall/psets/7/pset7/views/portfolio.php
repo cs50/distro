@@ -1,3 +1,37 @@
-<div>
-    <iframe allowfullscreen frameborder="0" height="315" src="https://www.youtube.com/embed/oHg5SJYRHA0?autoplay=1&iv_load_policy=3&rel=0" width="420"></iframe>
-</div>
+<table class="table table-striped">
+
+    <thead>
+        <tr>
+            <th>Symbol</th>
+            <th>Name</th>
+            <th>Shares</th>
+            <th>Price</th>
+            <th>TOTAL</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+    <?php 
+    
+        foreach ($positions as $position)
+        {
+            printf("<tr>");
+            printf("<td>%s</td>", htmlspecialchars($position["symbol"]));
+            printf("<td>%s</td>", htmlspecialchars($position["name"]));
+            printf("<td>%s</td>", number_format($position["shares"]));
+            printf("<td>$%s</td>", number_format($position["price"], 2));
+            printf("<td>$%s</td>", number_format($position["shares"] * $position["price"], 2));
+            printf("</tr>");
+        }
+
+    ?>
+
+    <tr>
+        <td colspan="4">CASH</td>
+        <td>$<?= number_format($cash, 2) ?></td>
+    </tr>
+
+    </tbody>
+
+</table>

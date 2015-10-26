@@ -1,12 +1,7 @@
             </div>
 
             <div id="bottom">
-                <?php if (!empty($_SESSION["id"])): ?>
-                    <a class="btn btn-default" href="logout.php" role="button">
-                        <span class="glyphicon glyphicon-log-out" aria-hidden="true"></span>
-                        Log Out
-                    </a>
-                <?php endif ?>
+                Brought to you by the number <a href="http://cdn.cs50.net/2015/fall/psets/7/pset7/pset7.html">7</a>.
             </div>
 
         </div>

@@ -17,8 +17,15 @@
 
 #top
 {
+    /* surround with whitespace */
     margin-bottom: 15px;
     margin-top: 15px;
+}
+
+#top .nav
+{
+    /* center navigation pills */
+    display: inline-block;
 }
 
 #middle .form-control
@@ -28,6 +35,12 @@
 
     /* override Bootstrap's 100% width for form controls */
     width: auto;
+}
+
+#middle td
+{
+    /* left-align tables' cells */
+    text-align: left;
 }
 
 #bottom
