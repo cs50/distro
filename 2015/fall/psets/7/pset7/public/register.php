@@ -22,7 +22,7 @@
 
         // try to register user
         $results = CS50::query("INSERT INTO users (username, hash, cash) VALUES(?, ?, 10000.0000)",
-            $_POST["username"], crypt($_POST["password"])
+            $_POST["username"], password_hash($_POST["password"], PASSWORD_DEFAULT)
         );
         if ($results === false)
         {
