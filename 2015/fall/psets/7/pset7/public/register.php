@@ -31,7 +31,7 @@
 
         // get new user's ID
         $rows = CS50::query("SELECT LAST_INSERT_ID() AS id");
-        if (count($rows) === 0)
+        if (count($rows) !== 1)
         {
             apologize("Can't find your ID.");
         }
