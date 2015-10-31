@@ -13,7 +13,7 @@
         }
 
         // get user's number of shares
-        $rows = CS50::query("SELECT shares FROM portfolios WHERE id = ? AND symbol = ?", $_SESSION["id"], $_POST["symbol"]);
+        $rows = CS50::query("SELECT shares FROM portfolios WHERE user_id = ? AND symbol = ?", $_SESSION["id"], $_POST["symbol"]);
         if (count($rows) != 1)
         {
             apologize("You don't own that stock.");
@@ -25,13 +25,13 @@
         if ($stock !== false)
         {
             // update portfolio
-            CS50::query("DELETE FROM portfolios WHERE id = ? AND symbol = ?", $_SESSION["id"], $_POST["symbol"]);
+            CS50::query("DELETE FROM portfolios WHERE user_id = ? AND symbol = ?", $_SESSION["id"], $_POST["symbol"]);
 
             // update cash
             CS50::query("UPDATE users SET cash = cash + ? WHERE id = ?", $shares * $stock["price"], $_SESSION["id"]);
 
             // update history
-            CS50::query("INSERT INTO history (id, type, symbol, shares, price, datetime)
+            CS50::query("INSERT INTO history (user_id, type, symbol, shares, price, datetime)
                 VALUES(?, 'SELL', ?, ?, ?, NOW())", $_SESSION["id"], $stock["symbol"],
                 $shares, $stock["price"]);
 
@@ -43,7 +43,7 @@
     {
         // get user's portfolio
         $symbols = [];
-        $rows = CS50::query("SELECT symbol FROM portfolios WHERE id = ? ORDER BY symbol", $_SESSION["id"]);
+        $rows = CS50::query("SELECT symbol FROM portfolios WHERE user_id = ? ORDER BY symbol", $_SESSION["id"]);
         if ($rows === false)
         {
             apologize("Could not find your portfolio.");

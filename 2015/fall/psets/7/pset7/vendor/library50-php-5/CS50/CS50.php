@@ -363,7 +363,7 @@
             // if query was DELETE, INSERT, or UPDATE
             else
             {
-                // return number of columns affected
+                // return number of rows affected
                 return $statement->rowCount();
             }
         }

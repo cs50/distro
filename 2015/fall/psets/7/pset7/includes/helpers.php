@@ -106,7 +106,7 @@
 
         // return stock as an associative array
         return [
-            "symbol" => $data[0],
+            "symbol" => strtoupper($data[0]),
             "name" => $data[1],
             "price" => floatval($data[2])
         ];

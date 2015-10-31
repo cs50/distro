@@ -12,7 +12,7 @@
     $cash = $rows[0]["cash"];
 
     // get user's portfolio
-    $rows = CS50::query("SELECT * FROM portfolios WHERE id = ?", $_SESSION["id"]);
+    $rows = CS50::query("SELECT * FROM portfolios WHERE user_id = ?", $_SESSION["id"]);
     if ($rows === false)
     {
         apologize("Can't find your portfolio.");
