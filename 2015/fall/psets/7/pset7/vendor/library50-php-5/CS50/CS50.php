@@ -341,7 +341,7 @@
             for ($i = 0, $n = count($parameters); $i < $n; $i++)
             {
                 array_push($patterns, $pattern);
-                array_push($replacements, $handle->quote($parameters[$i]));
+                array_push($replacements, preg_quote($handle->quote($parameters[$i])));
             }
             $query = preg_replace($patterns, $replacements, $sql, 1);
 
