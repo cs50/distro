@@ -9,6 +9,8 @@
 
         <link href="/css/styles.css" rel="stylesheet"/>
 
+        <meta content="initial-scale=1, width=device-width" name="viewport"/>
+
         <?php if (isset($title)): ?>
             <title>C$50 Finance: <?= htmlspecialchars($title) ?></title>
         <?php else: ?>
