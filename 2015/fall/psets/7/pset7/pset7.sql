@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS `portfolios` (
   `symbol` varchar(255) NOT NULL,
   `shares` int(11) unsigned NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `id_symbol` (`id`,`symbol`),
+  UNIQUE KEY `id_symbol` (`user_id`,`symbol`),
   KEY `user_id` (`user_id`)
 ) ENGINE=InnoDB;
 
