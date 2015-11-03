@@ -770,7 +770,7 @@ const char* lookup(const char* path)
     // .png
     else if (strcasecmp("png", extension) == 0)
     {
-        return "img/png";
+        return "image/png";
     }
 
     // *
