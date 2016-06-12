@@ -18,9 +18,9 @@
 int main(void)
 {
     // get user's name
-    string s = GetString();
+    string s = get_string();
 
-    // ensure GetString didn't return NULL
+    // ensure get_string didn't return NULL
     if (s != NULL)
     {
         // let's plan to output the first letter as an initial
