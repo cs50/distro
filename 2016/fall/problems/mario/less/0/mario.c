@@ -1,8 +1,6 @@
 #include <cs50.h>
 #include <stdio.h>
 
-#define MAX_HEIGHT 23
-
 int main(void)
 {
     // prompt user for pyramid's height
@@ -12,7 +10,7 @@ int main(void)
         printf("Height: ");
         height = get_int();
     }
-    while (height < 0 || height > MAX_HEIGHT);
+    while (height < 0 || height > 23);
 
     // calculate pyramid's width
     int width = height + 1;

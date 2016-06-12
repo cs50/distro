@@ -7,11 +7,11 @@ int main(void)
     int n;
     do
     {
-        printf("minutes: ");
-        n = GetInt();
+        printf("Minutes: ");
+        n = get_int();
     }
     while (n < 1);
     
     // report corresponding number of bottles
-    printf("bottles: %i\n", n * 12);
+    printf("Bottles: %i\n", n * 12);
 }
