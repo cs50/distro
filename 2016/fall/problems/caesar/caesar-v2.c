@@ -2,6 +2,7 @@
  * caesar_2.c
  *
  * Nate Hardison <nate@cs.harvard.edu>
+ * Doug Lloyd <lloyd@cs50.harvard.edu>
  *
  * Encrypts user-supplied plaintext using a Caesar cipher.
  */
@@ -33,16 +34,18 @@ int main(int argc, string argv[])
     }
 
     // get plaintext message from user; don't accept EOF as valid input
+    printf("plaintext: ");
     string message;
     do
     {
-        message = GetString();
+        message = get_string();
     }
     while (message == NULL);
 
     // encrypt the plaintext, printing out one char at a time
     // strlen can get optimized out by the compiler here since we're not
     // modifying the contents of "message."
+    printf("ciphertext: ");
     for (int i = 0; i < strlen(message); i++)
     {
         // only encrypt letters, not other chars (e.g., digits)
