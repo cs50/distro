@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
     // ensure proper usage
     if (argc != 3)
     {
-        printf("Usage: ./copy infile outfile\n");
+        fprintf(stderr, "Usage: ./copy infile outfile\n");
         return 1;
     }
 
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     FILE *inptr = fopen(infile, "r");
     if (inptr == NULL)
     {
-        printf("Could not open %s.\n", infile);
+        fprintf(stderr, "Could not open %s.\n", infile);
         return 2;
     }
 
