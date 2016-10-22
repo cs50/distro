@@ -28,7 +28,7 @@ def chart(positive, negative, neutral):
             }
         ],
         "layout": {
-            "showlegend": False
+            "showlegend": True
             }
     }
     return plotly.offline.plot(figure, output_type="div", show_link=False, link_text=False)
