@@ -12,12 +12,10 @@ def main():
         sys.exit("Usage: ./smile word")
 
     # instantiate analyzer
-    analyzer = Analyzer(positives="positive-words.txt", negatives="negative-words.txt")
+    analyzer = Analyzer()
 
     # analyze word
     score = analyzer.analyze(sys.argv[1])
-
-    # print word's score
     if score > 0.0:
         print(colored(":)", "green"))
     elif score < 0.0:

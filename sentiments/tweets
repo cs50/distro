@@ -1,35 +1,3 @@
 #!/usr/bin/env python3
 
-import html
-import os
-import sys
-
-from termcolor import colored
-from twython import Twython
-from twython.exceptions import TwythonAuthError
-
-from analyzer import Analyzer
-
-def main():
-
-    # TODO
-
-def get_user_timeline(screen_name):
-    """Return list of most recent tweets posted by screen_name."""
-
-    # ensure environment variables are set
-    if not os.environ.get("API_KEY"):
-        sys.exit("API_KEY not set")
-    if not os.environ.get("API_SECRET"):
-        sys.exit("API_SECRET not set")
-
-    # get @screen_name's 50 most recent tweets
-    try:
-        twitter = Twython(os.environ.get("API_KEY"), os.environ.get("API_SECRET"))
-        tweets = twitter.get_user_timeline(screen_name=screen_name, count=50)
-        return [html.unescape(tweet["text"].replace("\n", " ")) for tweet in tweets]
-    except TwythonAuthError:
-        return None
-
-if __name__ == "__main__":
-    main()
+# TODO

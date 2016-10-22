@@ -1,3 +1,5 @@
+flask
 nltk
+plotly
 termcolor
 twython
