@@ -15,7 +15,7 @@ def search():
     # validate screen_name
     screen_name = request.args.get("screen_name")
     if not screen_name:
-        redirect(url_for("/"))
+        return redirect(url_for("index"))
 
     # get screen_name's tweets
     tweets = helpers.get_user_timeline(screen_name)
