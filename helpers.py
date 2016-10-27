@@ -1,9 +1,10 @@
 import html
 import os
 import plotly
+import socket
 
 from twython import Twython
-from twython.exceptions import TwythonAuthError
+from twython import TwythonAuthError, TwythonRateLimitError
 
 def chart(positive, negative, neutral):
     """Return a pie chart for specified sentiments as HTML."""
@@ -54,4 +55,8 @@ def get_user_timeline(screen_name, count=200):
         tweets = twitter.get_user_timeline(screen_name=screen_name, count=count)
         return [html.unescape(tweet["text"].replace("\n", " ")) for tweet in tweets]
     except TwythonAuthError:
+        raise RuntimeError("invalid API_KEY and/or API_SECRET")
+    except TwythonRateLimitError:
+        raise RuntimeError("you've hit a rate limit")
+    except Exception:
         return None
