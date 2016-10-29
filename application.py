@@ -9,6 +9,10 @@ from helpers import *
 # configure application
 app = Flask(__name__)
 
+# ensure static files aren't cached
+if app.config["DEBUG"]:
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+
 # custom filter
 app.jinja_env.filters["usd"] = usd
 
