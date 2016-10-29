@@ -49,12 +49,8 @@ def login():
     # forget any user_id
     session.clear()
 
-    # if user reached route via GET (as by clicking a link or via redirect)
-    if request.method == "GET":
-        return render_template("login.html")
-
-    # else if user reached route via POST (as by submitting a form via POST)
-    elif request.method == "POST":
+    # if user reached route via POST (as by submitting a form via POST)
+    if request.method == "POST":
 
         # ensure username was submitted
         if not request.form.get("username"):
@@ -76,6 +72,10 @@ def login():
 
         # redirect user to home page
         return redirect(url_for("index"))
+
+    # else if user reached route via GET (as by clicking a link or via redirect)
+    else:
+        return render_template("login.html")
 
 @app.route("/logout")
 def logout():
