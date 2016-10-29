@@ -33,6 +33,12 @@ main .form-control
     width: auto;
 }
 
+main img
+{
+    /* constrain images on small screens */
+    max-width: 100%;
+}
+
 main td
 {
     /* left-align tables' cells */
