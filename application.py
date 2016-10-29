@@ -9,9 +9,14 @@ from helpers import *
 # configure application
 app = Flask(__name__)
 
-# ensure static files aren't cached
+# ensure responses aren't cached
 if app.config["DEBUG"]:
-    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+    @app.after_request
+    def after_request(response):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Expires"] = 0
+        response.headers["Pragma"] = "no-cache"
+        return response
 
 # custom filter
 app.jinja_env.filters["usd"] = usd
