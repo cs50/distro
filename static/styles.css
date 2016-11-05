@@ -14,18 +14,25 @@ html, body, #map-canvas, .container-fluid
     padding: 0;
 }
 
-/* align form to right of pan control */
+/* center form */
 #form
 {
-    /* center form */
-    left: 50%;
-    margin-left: -150px;
-
     /* position form "absolutely" where we want it */
     position: absolute;
 
     /* distance from top edge of viewport */
     top: 28px;
+
+    /* form's width */
+    width: 100%;
+}
+#form .form-group
+{
+    /* block-level flex container */
+    display: flex;
+
+    /* center container's content */
+    justify-content: center;
 }
 
 /* stylize text box */
