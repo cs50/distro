@@ -12,7 +12,7 @@ def main():
         sys.exit("Usage: ./smile word")
 
     # instantiate analyzer
-    analyzer = Analyzer()
+    analyzer = Analyzer("positive-words.txt", "negative-words.txt")
 
     # analyze word
     score = analyzer.analyze(sys.argv[1])

@@ -3,7 +3,7 @@ import nltk
 class Analyzer():
     """Implements sentiment analysis."""
 
-    def __init__(self, positives="positive-words.txt", negatives="negative-words.txt"):
+    def __init__(self, positives, negatives):
         """Initialize Analyzer."""
 
         # TODO
