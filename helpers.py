@@ -58,7 +58,7 @@ def get_user_timeline(screen_name, count=200):
             return None
         tweets = twitter.get_user_timeline(screen_name=screen_name, count=count)
         return [html.unescape(tweet["text"].replace("\n", " ")) for tweet in tweets]
-    except TwythonAuthError as e:
+    except TwythonAuthError:
         raise RuntimeError("invalid API_KEY and/or API_SECRET") from None
     except TwythonRateLimitError:
         raise RuntimeError("you've hit a rate limit") from None
