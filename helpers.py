@@ -47,13 +47,13 @@ def get_user_timeline(screen_name, count=200):
     if not os.environ.get("API_SECRET"):
         raise RuntimeError("API_SECRET not set")
 
-    # get screen_name's most recent tweets
+    # get screen_name's (or @screen_name's) most recent tweets
     # https://dev.twitter.com/rest/reference/get/users/lookup
     # https://dev.twitter.com/rest/reference/get/statuses/user_timeline
     # https://github.com/ryanmcgrath/twython/blob/master/twython/endpoints.py
     try:
         twitter = Twython(os.environ.get("API_KEY"), os.environ.get("API_SECRET"))
-        user = twitter.lookup_user(screen_name=screen_name)
+        user = twitter.lookup_user(screen_name=screen_name.lstrip("@"))
         if user[0]["protected"]:
             return None
         tweets = twitter.get_user_timeline(screen_name=screen_name, count=count)

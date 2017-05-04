@@ -13,7 +13,7 @@ def index():
 def search():
 
     # validate screen_name
-    screen_name = request.args.get("screen_name", "").lstrip("@")
+    screen_name = request.args.get("screen_name", "")
     if not screen_name:
         return redirect(url_for("index"))
 
