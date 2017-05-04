@@ -22,6 +22,6 @@ bool search(int value, int values[], int n)
  */
 void sort(int values[], int n)
 {
-    // TODO: implement an O(n^2) sorting algorithm
+    // TODO: implement a sorting algorithm
     return;
 }
