@@ -4,6 +4,7 @@ import urllib.request
 from flask import redirect, render_template, request, session, url_for
 from functools import wraps
 
+
 def apology(top="", bottom=""):
     """Renders message as an apology to user."""
     def escape(s):
@@ -18,6 +19,7 @@ def apology(top="", bottom=""):
         return s
     return render_template("apology.html", top=escape(top), bottom=escape(bottom))
 
+
 def login_required(f):
     """
     Decorate routes to require login.
@@ -30,6 +32,7 @@ def login_required(f):
             return redirect(url_for("login", next=request.url))
         return f(*args, **kwargs)
     return decorated_function
+
 
 def lookup(symbol):
     """Look up quote for symbol."""
@@ -64,6 +67,7 @@ def lookup(symbol):
         "price": price,
         "symbol": row[0].upper()
     }
+
 
 def usd(value):
     """Formats value as USD."""

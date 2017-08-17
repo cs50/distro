@@ -30,10 +30,12 @@ Session(app)
 # configure CS50 Library to use SQLite database
 db = SQL("sqlite:///finance.db")
 
+
 @app.route("/")
 @login_required
 def index():
     return apology("TODO")
+
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required
@@ -41,11 +43,13 @@ def buy():
     """Buy shares of stock."""
     return apology("TODO")
 
+
 @app.route("/history")
 @login_required
 def history():
     """Show history of transactions."""
     return apology("TODO")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -82,6 +86,7 @@ def login():
     else:
         return render_template("login.html")
 
+
 @app.route("/logout")
 def logout():
     """Log user out."""
@@ -92,16 +97,19 @@ def logout():
     # redirect user to login form
     return redirect(url_for("login"))
 
+
 @app.route("/quote", methods=["GET", "POST"])
 @login_required
 def quote():
     """Get stock quote."""
     return apology("TODO")
 
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     """Register user."""
     return apology("TODO")
+
 
 @app.route("/sell", methods=["GET", "POST"])
 @login_required
