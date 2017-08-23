@@ -1,12 +1,12 @@
 /**
- * Prompts user for as many as MAX values until EOF is reached, 
+ * Prompts user for as many as MAX values until EOF is reached,
  * then proceeds to search that "haystack" of values for given needle.
  *
  * Usage: ./find needle
  *
  * where needle is the value to find in a haystack of values
  */
-       
+
 #include <cs50.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,7 +40,7 @@ int main(int argc, string argv[])
         {
             break;
         }
-     
+
         // add hay to stack
         haystack[size] = straw;
     }

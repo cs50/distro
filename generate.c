@@ -8,7 +8,7 @@
  * where n is number of pseudorandom numbers to print
  * and s is an optional seed
  */
- 
+
 #define _XOPEN_SOURCE
 
 #include <cs50.h>
