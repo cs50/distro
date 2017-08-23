@@ -4,6 +4,7 @@ import urllib.request
 from flask import redirect, render_template, request, session, url_for
 from functools import wraps
 
+
 def apology(top="", bottom=""):
     """Renders message as an apology to user."""
     def escape(s):
@@ -13,10 +14,11 @@ def apology(top="", bottom=""):
         https://github.com/jacebrowning/memegen#special-characters
         """
         for old, new in [("-", "--"), (" ", "-"), ("_", "__"), ("?", "~q"),
-            ("%", "~p"), ("#", "~h"), ("/", "~s"), ("\"", "''")]:
+                         ("%", "~p"), ("#", "~h"), ("/", "~s"), ("\"", "''")]:
             s = s.replace(old, new)
         return s
     return render_template("apology.html", top=escape(top), bottom=escape(bottom))
+
 
 def login_required(f):
     """
@@ -30,6 +32,7 @@ def login_required(f):
             return redirect(url_for("login", next=request.url))
         return f(*args, **kwargs)
     return decorated_function
+
 
 def lookup(symbol):
     """Look up quote for symbol."""
@@ -45,7 +48,8 @@ def lookup(symbol):
     # query Yahoo for quote
     # http://stackoverflow.com/a/21351911
     try:
-        url = "http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s={}".format(symbol)
+        url = "http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s={}".format(
+            symbol)
         webpage = urllib.request.urlopen(url)
         datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
         row = next(datareader)
@@ -64,6 +68,7 @@ def lookup(symbol):
         "price": price,
         "symbol": row[0].upper()
     }
+
 
 def usd(value):
     """Formats value as USD."""
