@@ -30,10 +30,12 @@ Session(app)
 # configure CS50 Library to use SQLite database
 db = SQL("sqlite:///finance.db")
 
+
 @app.route("/")
 @login_required
 def index():
     return apology("TODO")
+
 
 @app.route("/buy", methods=["GET", "POST"])
 @login_required
@@ -41,11 +43,13 @@ def buy():
     """Buy shares of stock."""
     return apology("TODO")
 
+
 @app.route("/history")
 @login_required
 def history():
     """Show history of transactions."""
     return apology("TODO")
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -66,7 +70,8 @@ def login():
             return apology("must provide password")
 
         # query database for username
-        rows = db.execute("SELECT * FROM users WHERE username = :username", username=request.form.get("username"))
+        rows = db.execute("SELECT * FROM users WHERE username = :username",
+                          username=request.form.get("username"))
 
         # ensure username exists and password is correct
         if len(rows) != 1 or not pwd_context.verify(request.form.get("password"), rows[0]["hash"]):
@@ -82,6 +87,7 @@ def login():
     else:
         return render_template("login.html")
 
+
 @app.route("/logout")
 def logout():
     """Log user out."""
@@ -92,16 +98,19 @@ def logout():
     # redirect user to login form
     return redirect(url_for("login"))
 
+
 @app.route("/quote", methods=["GET", "POST"])
 @login_required
 def quote():
     """Get stock quote."""
     return apology("TODO")
 
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     """Register user."""
     return apology("TODO")
+
 
 @app.route("/sell", methods=["GET", "POST"])
 @login_required
