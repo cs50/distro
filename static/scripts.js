@@ -18,18 +18,18 @@ $(function() {
         {
             featureType: "all",
             elementType: "labels",
-            stylers: [
-                {visibility: "off"}
-            ]
+            stylers: [{
+                visibility: "off"
+            }]
         },
 
         // hide roads
         {
             featureType: "road",
             elementType: "geometry",
-            stylers: [
-                {visibility: "off"}
-            ]
+            stylers: [{
+                visibility: "off"
+            }]
         }
 
     ];
@@ -37,7 +37,10 @@ $(function() {
     // options for map
     // https://developers.google.com/maps/documentation/javascript/reference#MapOptions
     var options = {
-        center: {lat: 37.4236, lng: -122.1619}, // Stanford, California
+        center: {
+            lat: 37.4236,
+            lng: -122.1619
+        }, // Stanford, California
         disableDefaultUI: true,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
         maxZoom: 14,
@@ -61,23 +64,20 @@ $(function() {
 /**
  * Adds marker for place to map.
  */
-function addMarker(place)
-{
+function addMarker(place) {
     // TODO
 }
 
 /**
  * Configures application.
  */
-function configure()
-{
+function configure() {
     // update UI after map has been dragged
     google.maps.event.addListener(map, "dragend", function() {
 
         // if info window isn't open
         // http://stackoverflow.com/a/12410385
-        if (!info.getMap || !info.getMap())
-        {
+        if (!info.getMap || !info.getMap()) {
             update();
         }
     });
@@ -91,9 +91,10 @@ function configure()
     $("#q").typeahead({
         highlight: false,
         minLength: 1
-    },
-    {
-        display: function(suggestion) { return null; },
+    }, {
+        display: function(suggestion) {
+            return null;
+        },
         limit: 10,
         source: search,
         templates: {
@@ -109,7 +110,10 @@ function configure()
     $("#q").on("typeahead:selected", function(eventObject, suggestion, name) {
 
         // set map's center
-        map.setCenter({lat: parseFloat(suggestion.latitude), lng: parseFloat(suggestion.longitude)});
+        map.setCenter({
+            lat: parseFloat(suggestion.latitude),
+            lng: parseFloat(suggestion.longitude)
+        });
 
         // update UI
         update();
@@ -123,8 +127,8 @@ function configure()
     // re-enable ctrl- and right-clicking (and thus Inspect Element) on Google Map
     // https://chrome.google.com/webstore/detail/allow-right-click/hompjdfbfmmmgflfjdlnkohcplmboaeo?hl=en
     document.addEventListener("contextmenu", function(event) {
-        event.returnValue = true; 
-        event.stopPropagation && event.stopPropagation(); 
+        event.returnValue = true;
+        event.stopPropagation && event.stopPropagation();
         event.cancelBubble && event.cancelBubble();
     }, true);
 
@@ -138,50 +142,44 @@ function configure()
 /**
  * Removes markers from map.
  */
-function removeMarkers()
-{
+function removeMarkers() {
     // TODO
 }
 
 /**
  * Searches database for typeahead's suggestions.
  */
-function search(query, syncResults, asyncResults)
-{
+function search(query, syncResults, asyncResults) {
     // get places matching query (asynchronously)
     var parameters = {
         q: query
     };
     $.getJSON(Flask.url_for("search"), parameters)
-    .done(function(data, textStatus, jqXHR) {
-     
-        // call typeahead's callback with search results (i.e., places)
-        asyncResults(data);
-    })
-    .fail(function(jqXHR, textStatus, errorThrown) {
+        .done(function(data, textStatus, jqXHR) {
 
-        // log error to browser's console
-        console.log(errorThrown.toString());
+            // call typeahead's callback with search results (i.e., places)
+            asyncResults(data);
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
 
-        // call typeahead's callback with no results
-        asyncResults([]);
-    });
+            // log error to browser's console
+            console.log(errorThrown.toString());
+
+            // call typeahead's callback with no results
+            asyncResults([]);
+        });
 }
 
 /**
  * Shows info window at marker with content.
  */
-function showInfo(marker, content)
-{
+function showInfo(marker, content) {
     // start div
     var div = "<div id='info'>";
-    if (typeof(content) == "undefined")
-    {
+    if (typeof(content) == "undefined") {
         // http://www.ajaxload.info/
         div += "<img alt='loading' src='/static/ajax-loader.gif'/>";
-    }
-    else
-    {
+    } else {
         div += content;
     }
 
@@ -198,8 +196,7 @@ function showInfo(marker, content)
 /**
  * Updates UI's markers.
  */
-function update() 
-{
+function update() {
     // get map's bounds
     var bounds = map.getBounds();
     var ne = bounds.getNorthEast();
@@ -212,20 +209,19 @@ function update()
         sw: sw.lat() + "," + sw.lng()
     };
     $.getJSON(Flask.url_for("update"), parameters)
-    .done(function(data, textStatus, jqXHR) {
+        .done(function(data, textStatus, jqXHR) {
 
-       // remove old markers from map
-       removeMarkers();
+            // remove old markers from map
+            removeMarkers();
 
-       // add new markers to map
-       for (var i = 0; i < data.length; i++)
-       {
-           addMarker(data[i]);
-       }
-    })
-    .fail(function(jqXHR, textStatus, errorThrown) {
+            // add new markers to map
+            for (var i = 0; i < data.length; i++) {
+                addMarker(data[i]);
+            }
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
 
-        // log error to browser's console
-        console.log(errorThrown.toString());
-    });
+            // log error to browser's console
+            console.log(errorThrown.toString());
+        });
 };

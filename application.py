@@ -22,12 +22,14 @@ if app.config["DEBUG"]:
 # configure CS50 Library to use SQLite database
 db = SQL("sqlite:///mashup.db")
 
+
 @app.route("/")
 def index():
     """Render map."""
     if not os.environ.get("API_KEY"):
         raise RuntimeError("API_KEY not set")
     return render_template("index.html", key=os.environ.get("API_KEY"))
+
 
 @app.route("/articles")
 def articles():
@@ -36,12 +38,14 @@ def articles():
     # TODO
     return jsonify([])
 
+
 @app.route("/search")
 def search():
     """Search for places that match query."""
 
     # TODO
     return jsonify([])
+
 
 @app.route("/update")
 def update():
@@ -69,21 +73,23 @@ def update():
     if (sw_lng <= ne_lng):
 
         # doesn't cross the antimeridian
-        rows = db.execute("""SELECT * FROM places
-            WHERE :sw_lat <= latitude AND latitude <= :ne_lat AND (:sw_lng <= longitude AND longitude <= :ne_lng)
-            GROUP BY country_code, place_name, admin_code1
-            ORDER BY RANDOM()
-            LIMIT 10""",
+        rows = db.execute(
+            """SELECT * FROM places
+               WHERE :sw_lat <= latitude AND latitude <= :ne_lat AND (:sw_lng <= longitude AND longitude <= :ne_lng)
+               GROUP BY country_code, place_name, admin_code1
+               ORDER BY RANDOM()
+               LIMIT 10""",
             sw_lat=sw_lat, ne_lat=ne_lat, sw_lng=sw_lng, ne_lng=ne_lng)
 
     else:
 
         # crosses the antimeridian
-        rows = db.execute("""SELECT * FROM places
-            WHERE :sw_lat <= latitude AND latitude <= :ne_lat AND (:sw_lng <= longitude OR longitude <= :ne_lng)
-            GROUP BY country_code, place_name, admin_code1
-            ORDER BY RANDOM()
-            LIMIT 10""",
+        rows = db.execute(
+            """SELECT * FROM places
+               WHERE :sw_lat <= latitude AND latitude <= :ne_lat AND (:sw_lng <= longitude OR longitude <= :ne_lng)
+               GROUP BY country_code, place_name, admin_code1
+               ORDER BY RANDOM()
+               LIMIT 10""",
             sw_lat=sw_lat, ne_lat=ne_lat, sw_lng=sw_lng, ne_lng=ne_lng)
 
     # output places as JSON
