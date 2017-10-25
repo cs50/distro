@@ -1,4 +1,10 @@
-/* colors for navbar's brand name */
+nav .navbar-brand
+{
+    /* size for brand */
+    font-size: xx-large;
+}
+
+/* colors for brand */
 nav .navbar-brand .blue
 {
     color: #537fbe;
