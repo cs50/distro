@@ -1,25 +1,17 @@
-.container
-{
-    /* center contents */
-    margin-left: auto;
-    margin-right: auto;
-    text-align: center;
-}
-
-/* colors for navbar */
-.navbar-default .navbar-brand .blue
+/* colors for navbar's brand name */
+nav .navbar-brand .blue
 {
     color: #537fbe;
 }
-.navbar-default .navbar-brand .red
+nav .navbar-brand .red
 {
     color: #ea433b;
 }
-.navbar-default .navbar-brand .yellow
+nav .navbar-brand .yellow
 {
     color: #f5b82e;
 }
-.navbar-default .navbar-brand .green
+nav .navbar-brand .green
 {
     color: #2e944b;
 }
@@ -33,14 +25,29 @@ main .form-control
     width: auto;
 }
 
+main
+{
+    /* scroll horizontally as needed */
+    overflow-x: auto;
+
+    /* center contents */
+    text-align: center;
+}
+
 main img
 {
     /* constrain images on small screens */
     max-width: 100%;
 }
 
-main td
+main table
 {
-    /* left-align tables' cells */
+    /* left-align contents */
     text-align: left;
+}
+
+main tfoot
+{
+    /* boldface tables' footers */
+    font-weight: bold;
 }
