@@ -39,15 +39,3 @@ main img
     /* constrain images on small screens */
     max-width: 100%;
 }
-
-main table
-{
-    /* left-align contents */
-    text-align: left;
-}
-
-main tfoot
-{
-    /* boldface tables' footers */
-    font-weight: bold;
-}
