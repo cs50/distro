@@ -2,7 +2,7 @@ from cs50 import SQL
 from flask import Flask, flash, redirect, render_template, request, session
 from flask_session import Session
 from tempfile import mkdtemp
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import default_exceptions
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from helpers import apology, login_required, lookup, usd
@@ -118,3 +118,12 @@ def register():
 def sell():
     """Sell shares of stock"""
     return apology("TODO")
+
+
+def errorhandler(e):
+    """Handle error"""
+    return apology(e.name, e.code)
+
+# listen for errors
+for code in default_exceptions:
+    app.errorhandler(code)(errorhandler)
