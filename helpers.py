@@ -5,7 +5,7 @@ from flask import redirect, render_template, request, session
 from functools import wraps
 
 
-def apology(top="", bottom=""):
+def apology(message, code=400):
     """Renders message as an apology to user."""
     def escape(s):
         """
@@ -17,20 +17,19 @@ def apology(top="", bottom=""):
                          ("%", "~p"), ("#", "~h"), ("/", "~s"), ("\"", "''")]:
             s = s.replace(old, new)
         return s
-
-    return render_template("apology.html", top=escape(top), bottom=escape(bottom)), 400
+    return render_template("apology.html", message=escape(message)), code
 
 
 def login_required(f):
     """
     Decorate routes to require login.
 
-    http://flask.pocoo.org/docs/0.11/patterns/viewdecorators/
+    http://flask.pocoo.org/docs/0.12/patterns/viewdecorators/
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get("user_id") is None:
-            return redirect("/login", next=request.url)
+            return redirect(f"/login?next={request.url}")
         return f(*args, **kwargs)
     return decorated_function
 
@@ -49,8 +48,7 @@ def lookup(symbol):
     # query Yahoo for quote
     # http://stackoverflow.com/a/21351911
     try:
-        url = "http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s={}".format(
-            symbol)
+        url = "http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s={}".format(symbol)
         webpage = urllib.request.urlopen(url)
         datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
         row = next(datareader)
