@@ -17,7 +17,8 @@ def apology(top="", bottom=""):
                          ("%", "~p"), ("#", "~h"), ("/", "~s"), ("\"", "''")]:
             s = s.replace(old, new)
         return s
-    return render_template("apology.html", top=escape(top), bottom=escape(bottom))
+
+    return render_template("apology.html", top=escape(top), bottom=escape(bottom)), 400
 
 
 def login_required(f):
