@@ -124,6 +124,7 @@ def errorhandler(e):
     """Handle error"""
     return apology(e.name, e.code)
 
+
 # listen for errors
 for code in default_exceptions:
     app.errorhandler(code)(errorhandler)
