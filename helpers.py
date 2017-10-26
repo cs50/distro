@@ -48,7 +48,7 @@ def lookup(symbol):
     # query Yahoo for quote
     # http://stackoverflow.com/a/21351911
     try:
-        url = "http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s={}".format(symbol)
+        url = f"http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s={symbol}"
         webpage = urllib.request.urlopen(url)
         datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
         row = next(datareader)
@@ -71,4 +71,4 @@ def lookup(symbol):
 
 def usd(value):
     """Formats value as USD."""
-    return "${:,.2f}".format(value)
+    return f"${value:,.2f}"
