@@ -64,10 +64,10 @@ def update():
         raise RuntimeError("invalid ne")
 
     # Explode southwest corner into two variables
-    sw_lat, sw_lng = [float(s) for s in request.args.get("sw").split(",")]
+    sw_lat, sw_lng = map(float, request.args.get("sw").split(","))
 
     # Explode northeast corner into two variables
-    ne_lat, ne_lng = [float(s) for s in request.args.get("ne").split(",")]
+    ne_lat, ne_lng = map(float, request.args.get("ne").split(","))
 
     # Find 10 cities within view, pseudorandomly chosen if more within view
     if sw_lng <= ne_lng:
