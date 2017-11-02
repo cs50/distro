@@ -75,7 +75,7 @@ def lookup(symbol):
     except:
         pass
 
-    # Query Alpha Vantage for quote instead
+    # query Alpha Vantage for quote instead
     # https://www.alphavantage.co/documentation/
     try:
 

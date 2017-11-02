@@ -1,23 +1,25 @@
-nav .navbar-brand
+.container
 {
-    /* size for brand */
-    font-size: xx-large;
+    /* center contents */
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
 }
 
-/* colors for brand */
-nav .navbar-brand .blue
+/* colors for navbar */
+.navbar-default .navbar-brand .blue
 {
     color: #537fbe;
 }
-nav .navbar-brand .red
+.navbar-default .navbar-brand .red
 {
     color: #ea433b;
 }
-nav .navbar-brand .yellow
+.navbar-default .navbar-brand .yellow
 {
     color: #f5b82e;
 }
-nav .navbar-brand .green
+.navbar-default .navbar-brand .green
 {
     color: #2e944b;
 }
@@ -31,17 +33,14 @@ main .form-control
     width: auto;
 }
 
-main
-{
-    /* scroll horizontally as needed */
-    overflow-x: auto;
-
-    /* center contents */
-    text-align: center;
-}
-
 main img
 {
     /* constrain images on small screens */
     max-width: 100%;
+}
+
+main td
+{
+    /* left-align tables' cells */
+    text-align: left;
 }
