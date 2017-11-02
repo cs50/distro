@@ -16,7 +16,7 @@ def lookup(geo):
     escaped = urllib.parse.quote(geo, safe="")
 
     # Get feed from Google
-    feed = feedparser.parse(f"http://news.google.com/news?geo={escaped}&output=rss")
+    feed = feedparser.parse(f"https://news.google.com/news/rss/local/section/geo/{escaped}")
 
     # If no items in feed, get feed from Onion
     if not feed["items"]:

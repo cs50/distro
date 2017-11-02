@@ -149,7 +149,7 @@ function search(query, syncResults, asyncResults)
     var parameters = {
         q: query
     };
-    $.getJSON(Flask.url_for("search"), parameters)
+    $.getJSON("/search", parameters)
     .done(function(data, textStatus, jqXHR) {
      
         // Call typeahead's callback with search results (i.e., places)
@@ -206,7 +206,7 @@ function update()
         q: $("#q").val(),
         sw: sw.lat() + "," + sw.lng()
     };
-    $.getJSON(Flask.url_for("update"), parameters)
+    $.getJSON("/update", parameters)
     .done(function(data, textStatus, jqXHR) {
 
        // Remove old markers from map

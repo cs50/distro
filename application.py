@@ -1,14 +1,12 @@
 import os
 import re
 from flask import Flask, jsonify, render_template, request
-from flask_jsglue import JSGlue
 
 from cs50 import SQL
 from helpers import lookup
 
 # Configure application
 app = Flask(__name__)
-JSGlue(app)
 
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///mashup.db")
