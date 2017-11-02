@@ -1,57 +1,57 @@
-/* allow map to fill viewport */
+/* Allow map to fill viewport */
 html, body, #map-canvas, .container-fluid
 {
-    /* height of these elements */
+    /* Height of these elements */
     height: 100%;
 
-    /* no margin around these elements */
+    /* No margin around these elements */
     margin: 0;
 
-    /* disable scrollbars */
+    /* Disable scrollbars */
     overflow: hidden;
 
-    /* no padding within these elements */
+    /* No padding within these elements */
     padding: 0;
 }
 
-/* center form */
+/* Center form */
 #form
 {
-    /* position form "absolutely" where we want it */
+    /* Position form "absolutely" where we want it */
     position: absolute;
 
-    /* distance from top edge of viewport */
+    /* Distance from top edge of viewport */
     top: 28px;
 
-    /* form's width */
+    /* Form's width */
     width: 100%;
 }
 #form .form-group
 {
-    /* block-level flex container */
+    /* Block-level flex container */
     display: flex;
 
-    /* center container's content */
+    /* Center container's content */
     justify-content: center;
 }
 
-/* stylize text box */
+/* Stylize text box */
 #q
 {
-    /* override typeahead.js's transparent background */
+    /* Override typeahead.js's transparent background */
     background-color: #ffffff !important;
 
-    /* text box's width */
+    /* Text box's width */
     width: 300px;
 }
 
-/* stylize info window */
+/* Stylize info window */
 #info
 {
-    /* no margin around this element */
+    /* No margin around this element */
     margin: 0;
 
-    /* allow scrollbars as needed */
+    /* Allow scrollbars as needed */
     overflow: auto;
 }
 #info ul
@@ -59,7 +59,7 @@ html, body, #map-canvas, .container-fluid
     margin-bottom: 0;
 }
 
-/* stylize typeahead.js a la http://twitter.github.io/typeahead.js/css/examples.css */
+/* Stylize typeahead.js a la http://twitter.github.io/typeahead.js/css/examples.css */
 .tt-menu
 {
     background-color: #fff;

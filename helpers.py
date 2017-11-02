@@ -1,25 +1,29 @@
 import feedparser
 import urllib.parse
 
+
 def lookup(geo):
-    """Looks up articles for geo."""
+    """Look up articles for geo"""
 
-    # check cache for geo
-    if geo in lookup.cache:
-        return lookup.cache[geo]
+    # Check cache
+    try:
+        if geo in lookup.cache:
+            return lookup.cache[geo]
+    except AttributeError:
+        lookup.cache = {}
 
-    # get feed from Google
-    feed = feedparser.parse("http://news.google.com/news?geo={}&output=rss".format(urllib.parse.quote(geo, safe="")))
+    # Replace special characters
+    escaped = urllib.parse.quote(geo, safe="")
 
-    # if no items in feed, get feed from Onion
+    # Get feed from Google
+    feed = feedparser.parse(f"http://news.google.com/news?geo={escaped}&output=rss")
+
+    # If no items in feed, get feed from Onion
     if not feed["items"]:
         feed = feedparser.parse("http://www.theonion.com/feeds/rss")
 
-    # cache results
+    # Cache results
     lookup.cache[geo] = [{"link": item["link"], "title": item["title"]} for item in feed["items"]]
 
-    # return results
+    # Return results
     return lookup.cache[geo]
-
-# initialize cache
-lookup.cache = {}

@@ -10,7 +10,7 @@
         <!-- http://getbootstrap.com/ -->
         <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"/>
 
-        <!-- app's own CSS -->
+        <!-- App's own CSS -->
         <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet"/>
 
         <!-- https://developers.google.com/maps/documentation/javascript/ -->
@@ -32,14 +32,14 @@
         {{ JSGlue.include() }}
 
         <!-- app's own JavaScript -->
-        <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+        <script src="/static/scripts.js"></script>
 
         <title>Mashup</title>
 
     </head>
     <body>
 
-        <!-- fill viewport -->
+        <!-- Fill viewport -->
         <div class="container-fluid">
 
             <!-- https://developers.google.com/maps/documentation/javascript/tutorial -->
