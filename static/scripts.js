@@ -1,11 +1,11 @@
 // Google Map
-var map;
+let map;
 
 // Markers for map
-var markers = [];
+let markers = [];
 
 // Info window
-var info = new google.maps.InfoWindow();
+let info = new google.maps.InfoWindow();
 
 
 // Execute when the DOM is fully loaded
@@ -13,7 +13,7 @@ $(document).ready(function() {
 
     // Styles for map
     // https://developers.google.com/maps/documentation/javascript/styling
-    var styles = [
+    let styles = [
 
         // Hide Google's labels
         {
@@ -37,7 +37,7 @@ $(document).ready(function() {
 
     // Options for map
     // https://developers.google.com/maps/documentation/javascript/reference#MapOptions
-    var options = {
+    let options = {
         center: {lat: 37.4236, lng: -122.1619}, // Stanford, California
         disableDefaultUI: true,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
@@ -49,7 +49,7 @@ $(document).ready(function() {
     };
 
     // Get DOM node in which map will be instantiated
-    var canvas = $("#map-canvas").get(0);
+    let canvas = $("#map-canvas").get(0);
 
     // Instantiate map
     map = new google.maps.Map(canvas, options);
@@ -146,22 +146,13 @@ function removeMarkers()
 function search(query, syncResults, asyncResults)
 {
     // Get places matching query (asynchronously)
-    var parameters = {
+    let parameters = {
         q: query
     };
-    $.getJSON("/search", parameters)
-    .done(function(data, textStatus, jqXHR) {
+    $.getJSON("/search", parameters, function(data, textStatus, jqXHR) {
      
         // Call typeahead's callback with search results (i.e., places)
         asyncResults(data);
-    })
-    .fail(function(jqXHR, textStatus, errorThrown) {
-
-        // Log error to browser's console
-        console.log(errorThrown.toString());
-
-        // Call typeahead's callback with no results
-        asyncResults([]);
     });
 }
 
@@ -170,7 +161,7 @@ function search(query, syncResults, asyncResults)
 function showInfo(marker, content)
 {
     // Start div
-    var div = "<div id='info'>";
+    let div = "<div id='info'>";
     if (typeof(content) == "undefined")
     {
         // http://www.ajaxload.info/
@@ -196,31 +187,25 @@ function showInfo(marker, content)
 function update() 
 {
     // Get map's bounds
-    var bounds = map.getBounds();
-    var ne = bounds.getNorthEast();
-    var sw = bounds.getSouthWest();
+    let bounds = map.getBounds();
+    let ne = bounds.getNorthEast();
+    let sw = bounds.getSouthWest();
 
     // Get places within bounds (asynchronously)
-    var parameters = {
+    let parameters = {
         ne: ne.lat() + "," + ne.lng(),
         q: $("#q").val(),
         sw: sw.lat() + "," + sw.lng()
     };
-    $.getJSON("/update", parameters)
-    .done(function(data, textStatus, jqXHR) {
+    $.getJSON("/update", parameters, function(data, textStatus, jqXHR) {
 
        // Remove old markers from map
        removeMarkers();
 
        // Add new markers to map
-       for (var i = 0; i < data.length; i++)
+       for (let i = 0; i < data.length; i++)
        {
            addMarker(data[i]);
        }
-    })
-    .fail(function(jqXHR, textStatus, errorThrown) {
-
-        // Log error to browser's console
-        console.log(errorThrown.toString());
     });
 };
