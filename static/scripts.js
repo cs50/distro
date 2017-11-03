@@ -193,9 +193,9 @@ function update()
 
     // Get places within bounds (asynchronously)
     let parameters = {
-        ne: ne.lat() + "," + ne.lng(),
+        ne: `${ne.lat()},${ne.lng()}`,
         q: $("#q").val(),
-        sw: sw.lat() + "," + sw.lng()
+        sw: `${sw.lat()},${sw.lng()}`
     };
     $.getJSON("/update", parameters, function(data, textStatus, jqXHR) {
 
