@@ -100,7 +100,7 @@ def lookup(symbol):
 
         # return stock's name (as a str), price (as a float), and (uppercased) symbol (as a str)
         return {
-            "name": symbol.upper(), # for backward compatibility with Yahoo
+            "name": symbol.upper(),  # for backward compatibility with Yahoo
             "price": price,
             "symbol": symbol.upper()
         }
