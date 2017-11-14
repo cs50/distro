@@ -9,7 +9,7 @@ def lookup(geo):
         return lookup.cache[geo]
 
     # get feed from Google
-    feed = feedparser.parse("http://news.google.com/news?geo={}&output=rss".format(urllib.parse.quote(geo, safe="")))
+    feed = feedparser.parse("https://news.google.com/news/rss/local/section/geo/{}".format(urllib.parse.quote(geo, safe="")))
 
     # if no items in feed, get feed from Onion
     if not feed["items"]:
