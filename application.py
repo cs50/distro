@@ -8,6 +8,9 @@ from helpers import lookup
 # Configure application
 app = Flask(__name__)
 
+# Ensure templates are auto-reloaded
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///mashup.db")
 
