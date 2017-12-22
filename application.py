@@ -11,6 +11,10 @@ app = Flask(__name__)
 # Ensure templates are auto-reloaded
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
+# Disable pretty JSON
+# https://github.com/pallets/flask/issues/2549
+app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
+
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///mashup.db")
 
