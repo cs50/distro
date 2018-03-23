@@ -6,7 +6,7 @@ from functools import wraps
 
 
 def apology(message, code=400):
-    """Renders message as an apology to user."""
+    """Render message as an apology to user."""
     def escape(s):
         """
         Escape special characters.
@@ -37,45 +37,15 @@ def login_required(f):
 def lookup(symbol):
     """Look up quote for symbol."""
 
-    # reject symbol if it starts with caret
+    # Reject symbol if it starts with caret
     if symbol.startswith("^"):
         return None
 
-    # reject symbol if it contains comma
+    # Reject symbol if it contains comma
     if "," in symbol:
         return None
 
-    # query Yahoo for quote
-    # http://stackoverflow.com/a/21351911
-    try:
-
-        # GET CSV
-        url = f"http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s={symbol}"
-        webpage = urllib.request.urlopen(url)
-
-        # read CSV
-        datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
-
-        # parse first row
-        row = next(datareader)
-
-        # ensure stock exists
-        try:
-            price = float(row[2])
-        except:
-            return None
-
-        # return stock's name (as a str), price (as a float), and (uppercased) symbol (as a str)
-        return {
-            "name": row[1],
-            "price": price,
-            "symbol": row[0].upper()
-        }
-
-    except:
-        pass
-
-    # Query Alpha Vantage for quote instead
+    # Query Alpha Vantage for quote
     # https://www.alphavantage.co/documentation/
     try:
 
@@ -83,24 +53,23 @@ def lookup(symbol):
         url = f"https://www.alphavantage.co/query?apikey={os.getenv('API_KEY')}&datatype=csv&function=TIME_SERIES_INTRADAY&interval=1min&symbol={symbol}"
         webpage = urllib.request.urlopen(url)
 
-        # parse CSV
+        # Parse CSV
         datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
 
-        # ignore first row
+        # Ignore first row
         next(datareader)
 
-        # parse second row
+        # Parse second row
         row = next(datareader)
 
-        # ensure stock exists
+        # Ensure stock exists
         try:
             price = float(row[4])
         except:
             return None
 
-        # return stock's name (as a str), price (as a float), and (uppercased) symbol (as a str)
+        # Return stock's name (as a str), price (as a float), and (uppercased) symbol (as a str)
         return {
-            "name": symbol.upper(),  # for backward compatibility with Yahoo
             "price": price,
             "symbol": symbol.upper()
         }
@@ -110,5 +79,5 @@ def lookup(symbol):
 
 
 def usd(value):
-    """Formats value as USD."""
+    """Format value as USD."""
     return f"${value:,.2f}"
