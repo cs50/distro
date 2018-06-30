@@ -4,7 +4,7 @@ from cs50 import SQL
 from flask import Flask, flash, redirect, render_template, request, session
 from flask_session import Session
 from tempfile import mkdtemp
-from werkzeug.exceptions import default_exceptions
+from werkzeug.exceptions import default_exceptions, HTTPException
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from helpers import apology, login_required, lookup, usd
@@ -131,7 +131,10 @@ def sell():
 
 def errorhandler(e):
     """Handle error"""
-    return apology(e.name, e.code)
+    if isinstance(e, HTTPException):
+        return apology(e.name, e.code)
+    else:
+        return apology(repr(e), "exception thrown")
 
 
 # listen for errors
