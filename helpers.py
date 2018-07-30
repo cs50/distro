@@ -53,7 +53,7 @@ def lookup(symbol):
             "price": float(stock["price"]),
             "symbol": stock["company"]["symbol"]
         }
-    except (KeyError, TypeError):
+    except (KeyError, TypeError, ValueError):
         return None
 
 
