@@ -1,9 +1,7 @@
-import csv
-import os
-import urllib.request
+from functools import wraps
 
 from flask import redirect, render_template, request, session
-from functools import wraps
+import requests
 
 
 def apology(message, code=400):
@@ -38,45 +36,23 @@ def login_required(f):
 def lookup(symbol):
     """Look up quote for symbol."""
 
-    # Reject symbol if it starts with caret
-    if symbol.startswith("^"):
-        return None
-
-    # Reject symbol if it contains comma
-    if "," in symbol:
-        return None
-
-    # Query Alpha Vantage for quote
-    # https://www.alphavantage.co/documentation/
+    # TODO: add logging to aid debugging
     try:
-
-        # GET CSV
-        url = f"https://www.alphavantage.co/query?apikey={os.getenv('API_KEY')}&datatype=csv&function=TIME_SERIES_INTRADAY&interval=1min&symbol={symbol}"
-        webpage = urllib.request.urlopen(url)
-
-        # Parse CSV
-        datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
-
-        # Ignore first row
-        next(datareader)
-
-        # Parse second row
-        row = next(datareader)
-
-        # Ensure stock exists
-        try:
-            price = float(row[4])
-        except:
-            return None
-
-        # Return stock's name (as a str), price (as a float), and (uppercased) symbol (as a str)
-        return {
-            "price": price,
-            "symbol": symbol.upper()
-        }
-
-    except:
+        response = requests.get(f"https://api.iextrading.com/1.0/stock/{symbol}/batch",
+                                params={"types": "price,company", "last": 1})
+    except requests.RequestException:
         return None
+
+
+    if response.status_code != 200:
+        return None
+
+    stock_info = response.json()
+    return {
+        "price": float(stock_info["price"]),
+        "name": stock_info["company"]["companyName"],
+        "symbol": symbol.upper()
+    }
 
 
 def usd(value):
