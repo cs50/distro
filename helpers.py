@@ -1,7 +1,8 @@
-from functools import wraps
+import requests
+import urllib.parse
 
 from flask import redirect, render_template, request, session
-import requests
+from functools import wraps
 
 
 def apology(message, code=400):
@@ -36,23 +37,24 @@ def login_required(f):
 def lookup(symbol):
     """Look up quote for symbol."""
 
-    # TODO: add logging to aid debugging
+    # Contact API
     try:
-        response = requests.get(f"https://api.iextrading.com/1.0/stock/{symbol}/batch",
-                                params={"types": "price,company", "last": 1})
+        response = requests.get(f"https://api.iextrading.com/1.0/stock/{urllib.parse.quote_plus(symbol)}/batch",
+                                params={"types": "company,price", "last": 1})
+        response.raise_for_status()
     except requests.RequestException:
         return None
 
-
-    if response.status_code != 200:
+    # Parse response
+    try:
+        stock = response.json()
+        return {
+            "name": stock["company"]["companyName"],
+            "price": float(stock["price"]),
+            "symbol": stock["company"]["symbol"]
+        }
+    except (KeyError, TypeError):
         return None
-
-    stock_info = response.json()
-    return {
-        "price": float(stock_info["price"]),
-        "name": stock_info["company"]["companyName"],
-        "symbol": symbol.upper()
-    }
 
 
 def usd(value):

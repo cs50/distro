@@ -40,16 +40,6 @@ main
     text-align: center;
 }
 
-footer
-{
-    text-align: center;
-    font-size: small;
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-
-}
-
 main img
 {
     /* constrain images on small screens */
