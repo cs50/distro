@@ -39,19 +39,18 @@ def lookup(symbol):
 
     # Contact API
     try:
-        response = requests.get(f"https://api.iextrading.com/1.0/stock/{urllib.parse.quote_plus(symbol)}/batch",
-                                params={"types": "company,price", "last": 1})
+        response = requests.get(f"https://api.iextrading.com/1.0/stock/{urllib.parse.quote_plus(symbol)}/quote")
         response.raise_for_status()
     except requests.RequestException:
         return None
 
     # Parse response
     try:
-        stock = response.json()
+        quote = response.json()
         return {
-            "name": stock["company"]["companyName"],
-            "price": float(stock["price"]),
-            "symbol": stock["company"]["symbol"]
+            "name": quote["companyName"],
+            "price": float(quote["latestPrice"]),
+            "symbol": quote["symbol"]
         }
     except (KeyError, TypeError, ValueError):
         return None
