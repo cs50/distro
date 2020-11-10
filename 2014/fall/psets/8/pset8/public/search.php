@@ -9,11 +9,10 @@
         exit;
     }
 
-    // pattern to match against, with a wildcard appended
-    $pat = $_GET["geo"] . "%";
-
-    // select rows that match pattern
-    $rows = query("SELECT * FROM places WHERE MATCH(country_code,postal_code,place_name,admin_name1,admin_name2,admin_name3) AGAINST (? WITH QUERY EXPANSION) LIMIT 50", $pat);
+    // select rows that match pattern, ignoring country_code,
+    // which wouldn't meet default ft_min_word_len, per
+    // http://dev.mysql.com/doc/refman/5.5/en/server-system-variables.html#sysvar_ft_min_word_len
+    $rows = query("SELECT * FROM places WHERE MATCH(postal_code,place_name,admin_name1,admin_name2,admin_name3) AGAINST (?) LIMIT 50", $_GET["geo"]);
 
     // output places as JSON (pretty-printed for debugging convenience)
     header("Content-type: application/json");

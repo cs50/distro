@@ -169,9 +169,17 @@ function configure()
         }
     });
 
-    // re-center map and update UI after place is selected from drop-down
+    // re-center map after place is selected from drop-down
     $("#q").on("typeahead:selected", function(eventObject, suggestion, name) {
-        map.setCenter({lat: parseFloat(suggestion.latitude), lng: parseFloat(suggestion.longitude)});
+
+        // ensure coordinates are numbers
+        var latitude = (_.isNumber(suggestion.latitude)) ? suggestion.latitude : parseFloat(suggestion.latitude);
+        var longitude = (_.isNumber(suggestion.longitude)) ? suggestion.longitude : parseFloat(suggestion.longitude);
+
+        // set map's center
+        map.setCenter({lat: latitude, lng: longitude});
+
+        // update UI
         update();
     });
 

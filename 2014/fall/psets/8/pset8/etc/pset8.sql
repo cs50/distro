@@ -24,5 +24,5 @@ CREATE TABLE IF NOT EXISTS `pset8`.`places` (
   `longitude` decimal(7,4) NOT NULL,
   `accuracy` tinyint(4) NOT NULL,
   PRIMARY KEY (`id`),
-  FULLTEXT KEY `fulltext` (`country_code`,`postal_code`,`place_name`,`admin_name1`,`admin_name2`,`admin_name3`)
+  FULLTEXT KEY `fulltext` (`postal_code`,`place_name`,`admin_name1`,`admin_name2`,`admin_name3`)
 ) ENGINE=MyISAM;
